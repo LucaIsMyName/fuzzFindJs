@@ -1,0 +1,61 @@
+{
+  "name": "fuzzyfindjs",
+  "version": "1.0.0",
+  "description": "A powerful, multi-language optimized fuzzy search library with phonetic matching, compound word splitting, and intelligent synonym support",
+  "type": "module",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/types/index.d.ts"
+    },
+    "./languages/*": {
+      "import": "./dist/esm/languages/*.js",
+      "require": "./dist/cjs/languages/*.js",
+      "types": "./dist/types/languages/*.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run build:types && npm run build:esm && npm run build:cjs",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist/types",
+    "build:esm": "vite build --config vite.config.esm.ts",
+    "build:cjs": "vite build --config vite.config.cjs.ts",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "preview": "vite preview",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "fuzzy",
+    "search",
+    "german",
+    "english",
+    "spanish",
+    "french",
+    "phonetic",
+    "typescript",
+    "multilingual"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/fuzzyfindjs.git"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.13",
+    "typescript": "~5.9.3",
+    "vite": "^7.1.7",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^2.1.9"
+  }
+}
