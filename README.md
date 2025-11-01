@@ -22,6 +22,8 @@ A powerful, multi-language optimized fuzzy search library with phonetic matching
 
 ## 📦 Installation
 
+### NPM / Yarn / PNPM
+
 ```bash
 npm install fuzzyfindjs
 ```
@@ -32,6 +34,65 @@ yarn add fuzzyfindjs
 
 ```bash
 pnpm add fuzzyfindjs
+```
+
+### CDN (Browser)
+
+For quick prototyping or simple projects, you can use FuzzyFindJS directly from a CDN:
+
+```html
+<!-- unpkg - latest version -->
+<script src="https://unpkg.com/fuzzyfindjs@latest/dist/umd/fuzzyfindjs.min.js"></script>
+
+<!-- unpkg - specific version (recommended for production) -->
+<script src="https://unpkg.com/fuzzyfindjs@1.0.3/dist/umd/fuzzyfindjs.min.js"></script>
+
+<!-- jsdelivr - latest version -->
+<script src="https://cdn.jsdelivr.net/npm/fuzzyfindjs@latest/dist/umd/fuzzyfindjs.min.js"></script>
+
+<!-- jsdelivr - specific version (recommended for production) -->
+<script src="https://cdn.jsdelivr.net/npm/fuzzyfindjs@1.0.3/dist/umd/fuzzyfindjs.min.js"></script>
+```
+
+**Bundle Size:** 23.7 KB minified, 7.5 KB gzipped
+
+The library will be available globally as `FuzzyFindJS`:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FuzzyFindJS CDN Example</title>
+</head>
+<body>
+    <input type="text" id="search" placeholder="Search...">
+    <ul id="results"></ul>
+
+    <script src="https://unpkg.com/fuzzyfindjs@latest/dist/umd/fuzzyfindjs.min.js"></script>
+    <script>
+        // Access the library from the global FuzzyFindJS object
+        const { createFuzzySearch } = FuzzyFindJS;
+        
+        // Create search instance
+        const items = ['Apple', 'Banana', 'Cherry', 'Date', 'Elderberry', 'Fig', 'Grape'];
+        const search = createFuzzySearch(items, {
+            languages: ['english'],
+            performance: 'fast',
+            maxResults: 5
+        });
+        
+        // Handle search input
+        document.getElementById('search').addEventListener('input', (e) => {
+            const results = search.search(e.target.value);
+            const resultsList = document.getElementById('results');
+            
+            resultsList.innerHTML = results
+                .map(r => `<li>${r.display} (${r.score.toFixed(2)})</li>`)
+                .join('');
+        });
+    </script>
+</body>
+</html>
 ```
 
 ## 🎮 Try the Interactive Demo
@@ -274,6 +335,231 @@ interface SearchOptions {
 ```
 
 ## 💡 Usage Examples
+
+### Browser: CDN Usage
+
+#### Basic Search with Vanilla JavaScript
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FuzzyFindJS - Simple Search</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; }
+        input { width: 100%; padding: 10px; font-size: 16px; }
+        ul { list-style: none; padding: 0; }
+        li { padding: 8px; border-bottom: 1px solid #eee; }
+        .score { color: #666; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Fuzzy Search Demo</h1>
+    <input type="text" id="search" placeholder="Type to search..." autofocus>
+    <ul id="results"></ul>
+
+    <script src="https://unpkg.com/fuzzyfindjs@latest/dist/umd/fuzzyfindjs.min.js"></script>
+    <script>
+        const { createFuzzySearch } = FuzzyFindJS;
+        
+        const fruits = [
+            'Apple', 'Apricot', 'Banana', 'Blackberry', 'Blueberry',
+            'Cherry', 'Coconut', 'Cranberry', 'Date', 'Dragonfruit',
+            'Elderberry', 'Fig', 'Grape', 'Grapefruit', 'Guava',
+            'Kiwi', 'Lemon', 'Lime', 'Mango', 'Orange', 'Papaya',
+            'Peach', 'Pear', 'Pineapple', 'Plum', 'Raspberry',
+            'Strawberry', 'Watermelon'
+        ];
+        
+        const search = createFuzzySearch(fruits, {
+            languages: ['english'],
+            performance: 'fast',
+            maxResults: 10
+        });
+        
+        const searchInput = document.getElementById('search');
+        const resultsList = document.getElementById('results');
+        
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value;
+            
+            if (query.length < 2) {
+                resultsList.innerHTML = '';
+                return;
+            }
+            
+            const results = search.search(query);
+            
+            if (results.length === 0) {
+                resultsList.innerHTML = '<li>No results found</li>';
+                return;
+            }
+            
+            resultsList.innerHTML = results
+                .map(r => `
+                    <li>
+                        <strong>${r.display}</strong>
+                        <span class="score">Score: ${r.score.toFixed(2)}</span>
+                    </li>
+                `)
+                .join('');
+        });
+    </script>
+</body>
+</html>
+```
+
+#### Multi-language Search
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Multi-language Fuzzy Search</title>
+</head>
+<body>
+    <h1>🌍 Multi-language Search</h1>
+    <input type="text" id="search" placeholder="Search in any language...">
+    <div id="results"></div>
+
+    <script src="https://unpkg.com/fuzzyfindjs@latest/dist/umd/fuzzyfindjs.min.js"></script>
+    <script>
+        const { createFuzzySearch } = FuzzyFindJS;
+        
+        // Dictionary with German, English, French, Spanish words
+        const places = [
+            'Krankenhaus', 'Hospital', 'Hôpital', 'Hospital',
+            'Schule', 'School', 'École', 'Escuela',
+            'Apotheke', 'Pharmacy', 'Pharmacie', 'Farmacia',
+            'Bahnhof', 'Station', 'Gare', 'Estación',
+            'Flughafen', 'Airport', 'Aéroport', 'Aeropuerto'
+        ];
+        
+        const search = createFuzzySearch(places, {
+            languages: ['german', 'english', 'french', 'spanish'],
+            performance: 'comprehensive',
+            features: ['phonetic', 'partial-words', 'synonyms'],
+            maxResults: 15
+        });
+        
+        document.getElementById('search').addEventListener('input', (e) => {
+            const results = search.search(e.target.value);
+            const output = document.getElementById('results');
+            
+            output.innerHTML = results.length 
+                ? results.map(r => `<p>${r.display} (${r.score.toFixed(2)})</p>`).join('')
+                : '<p>No results</p>';
+        });
+    </script>
+</body>
+</html>
+```
+
+#### Autocomplete Dropdown
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Autocomplete with FuzzyFindJS</title>
+    <style>
+        .autocomplete {
+            position: relative;
+            width: 400px;
+            margin: 50px auto;
+        }
+        .autocomplete input {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+        }
+        .autocomplete-items {
+            position: absolute;
+            border: 1px solid #ddd;
+            border-top: none;
+            z-index: 99;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 300px;
+            overflow-y: auto;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .autocomplete-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        .autocomplete-item:hover {
+            background-color: #e9e9e9;
+        }
+        .autocomplete-active {
+            background-color: #4CAF50 !important;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="autocomplete">
+        <input type="text" id="cityInput" placeholder="Search cities...">
+        <div id="autocomplete-list" class="autocomplete-items"></div>
+    </div>
+
+    <script src="https://unpkg.com/fuzzyfindjs@latest/dist/umd/fuzzyfindjs.min.js"></script>
+    <script>
+        const { createFuzzySearch } = FuzzyFindJS;
+        
+        const cities = [
+            'Berlin', 'München', 'Hamburg', 'Köln', 'Frankfurt',
+            'Stuttgart', 'Düsseldorf', 'Dortmund', 'Essen', 'Leipzig',
+            'Bremen', 'Dresden', 'Hannover', 'Nürnberg', 'Duisburg'
+        ];
+        
+        const search = createFuzzySearch(cities, {
+            languages: ['german'],
+            performance: 'fast',
+            maxResults: 8
+        });
+        
+        const input = document.getElementById('cityInput');
+        const list = document.getElementById('autocomplete-list');
+        
+        input.addEventListener('input', (e) => {
+            const query = e.target.value;
+            list.innerHTML = '';
+            
+            if (query.length < 2) return;
+            
+            const results = search.search(query);
+            
+            results.forEach(result => {
+                const item = document.createElement('div');
+                item.className = 'autocomplete-item';
+                item.textContent = result.display;
+                item.addEventListener('click', () => {
+                    input.value = result.display;
+                    list.innerHTML = '';
+                });
+                list.appendChild(item);
+            });
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.autocomplete')) {
+                list.innerHTML = '';
+            }
+        });
+    </script>
+</body>
+</html>
+```
 
 ### Frontend: Autocomplete Search
 
