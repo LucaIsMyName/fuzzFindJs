@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FuzzyFindJS - CDN Example</title>
+</head>
+<body>
+    <h1>FuzzyFindJS CDN Example</h1>
+    <div id="output"></div>
+
+    <!-- Load from unpkg CDN -->
+    <script src="https://unpkg.com/fuzzyfindjs@latest/dist/umd/fuzzyfindjs.min.js"></script>
+    
+    <!-- Or from jsdelivr CDN -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/fuzzyfindjs@latest/dist/umd/fuzzyfindjs.min.js"></script> -->
+    
+    <script>
+        // FuzzyFindJS is now available globally
+        const { FuzzySearch } = FuzzyFindJS;
+        
+        // Example usage
+        const items = ['apple', 'banana', 'orange', 'grape', 'pineapple'];
+        const fuzzy = new FuzzySearch(items);
+        const results = fuzzy.search('aple');
+        
+        document.getElementById('output').innerHTML = `
+            <h2>Search Results for "aple":</h2>
+            <pre>${JSON.stringify(results, null, 2)}</pre>
+        `;
+        
+        console.log('FuzzyFindJS loaded successfully!', results);
+    </script>
+</body>
+</html>

@@ -1,11 +1,13 @@
 {
   "name": "fuzzyfindjs",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "A powerful, multi-language optimized fuzzy search library with phonetic matching, compound word splitting, and intelligent synonym support",
   "type": "module",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
   "types": "./dist/types/index.d.ts",
+  "unpkg": "./dist/umd/fuzzyfindjs.min.js",
+  "jsdelivr": "./dist/umd/fuzzyfindjs.min.js",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
@@ -25,10 +27,11 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:types && npm run build:esm && npm run build:cjs",
+    "build": "npm run build:types && npm run build:esm && npm run build:cjs && npm run build:umd",
     "build:types": "tsc --project tsconfig.build.json",
     "build:esm": "vite build --config vite.config.esm.ts",
     "build:cjs": "vite build --config vite.config.cjs.ts",
+    "build:umd": "vite build --config vite.config.umd.ts",
     "verify": "node scripts/verify-build.js",
     "test": "vitest",
     "test:coverage": "vitest --coverage",

@@ -57,12 +57,13 @@ const DICTIONARIES = {
       'SSL', 'Stack', 'Storage', 'Syntax', 'System',
       'Testing', 'Token', 'TypeScript', 'Ubuntu', 'UI/UX',
       'Validation', 'Variable', 'Version Control', 'Virtual Machine', 'Vue.js',
-      'Webpack', 'WebSocket', 'Widget', 'Workflow', 'XML'
+      'Webpack', 'WebSocket', 'Widget', 'Workflow', 'XML', "Design", "Vibe Engineering", "Ubuntu", "MacOs", "Windows 11", "iOS", "Open Source Software", "Source Map", "Search Index", "Index", "Continuity", "Race Condition"
     ]
   },
   'multi-language': {
     name: 'Multi-Language Mix',
-    languages: ['german', 'english', 'french', 'spanish'],
+    languages: [
+      'german', 'english', 'french', 'spanish'],
     words: [
       // Healthcare
       'Hospital', 'Krankenhaus', 'Hôpital', 'Hospital',
@@ -96,9 +97,9 @@ const DICTIONARIES = {
     ]
   },
   'large-dataset': {
-    name: 'Large Dataset (1000 items)',
+    name: 'Large Dataset (10000 items)',
     languages: ['english'],
-    words: generateLargeDataset(1000)
+    words: generateLargeDataset(10000)
   }
 };
 
@@ -118,6 +119,9 @@ function generateLargeDataset(count) {
   return words;
 }
 
+// LocalStorage key
+const STORAGE_KEY = 'fuzzyfindjs-demo-state';
+
 // Global state
 let currentIndex = null;
 let currentDictionary = 'german-healthcare';
@@ -131,21 +135,164 @@ let currentConfig = {
   minQueryLength: 2
 };
 
+// Load state from localStorage
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const state = JSON.parse(saved);
+      console.log('📦 Loaded state from localStorage:', state);
+      return state;
+    }
+  } catch (error) {
+    console.warn('Failed to load state from localStorage:', error);
+  }
+  return null;
+}
+
+// Save state to localStorage
+function saveState() {
+  try {
+    const state = {
+      searchQuery: document.getElementById('searchInput').value,
+      dictionary: currentDictionary,
+      config: currentConfig,
+      debugEnabled: document.getElementById('debugToggle').checked
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    console.log('💾 Saved state to localStorage');
+
+    // Show save indicator
+    showSaveIndicator();
+  } catch (error) {
+    console.warn('Failed to save state to localStorage:', error);
+  }
+}
+
+// Show visual feedback that settings were saved
+function showSaveIndicator() {
+  const indicator = document.getElementById('saveIndicator');
+  if (indicator) {
+    indicator.style.opacity = '1';
+    setTimeout(() => {
+      indicator.style.opacity = '0';
+    }, 2000);
+  }
+}
+
+// Restore UI from saved state
+function restoreState(state) {
+  if (!state) return;
+
+  // Restore search query
+  if (state.searchQuery) {
+    document.getElementById('searchInput').value = state.searchQuery;
+  }
+
+  // Restore dictionary
+  if (state.dictionary && DICTIONARIES[state.dictionary]) {
+    currentDictionary = state.dictionary;
+    document.getElementById('dictionarySelect').value = state.dictionary;
+  }
+
+  // Restore config
+  if (state.config) {
+    currentConfig = { ...currentConfig, ...state.config };
+
+    // Restore performance mode
+    if (state.config.performance) {
+      const radio = document.querySelector(`input[name="performance"][value="${state.config.performance}"]`);
+      if (radio) radio.checked = true;
+    }
+
+    // Restore features
+    if (state.config.features) {
+      document.querySelectorAll('.feature-checkbox').forEach(checkbox => {
+        checkbox.checked = state.config.features.includes(checkbox.value);
+      });
+    }
+
+    // Restore advanced settings
+    if (state.config.maxResults !== undefined) {
+      document.getElementById('maxResults').value = state.config.maxResults;
+      updateMaxResults(state.config.maxResults);
+    }
+    if (state.config.fuzzyThreshold !== undefined) {
+      document.getElementById('fuzzyThreshold').value = state.config.fuzzyThreshold;
+      updateFuzzyThreshold(state.config.fuzzyThreshold);
+    }
+    if (state.config.maxEditDistance !== undefined) {
+      document.getElementById('maxEditDistance').value = state.config.maxEditDistance;
+      updateMaxEditDistance(state.config.maxEditDistance);
+    }
+    if (state.config.minQueryLength !== undefined) {
+      document.getElementById('minQueryLength').value = state.config.minQueryLength;
+      updateMinQueryLength(state.config.minQueryLength);
+    }
+  }
+
+  // Restore debug toggle
+  if (state.debugEnabled) {
+    document.getElementById('debugToggle').checked = true;
+    document.getElementById('debugInfo').classList.remove('hidden');
+  }
+
+  console.log('✅ State restored from localStorage');
+}
+
 // Initialize
 function init() {
   console.log('🚀 Initializing FuzzyFindJS Demo Dashboard...');
 
-  // Set initial features based on performance mode
-  updateFeaturesFromPerformance('balanced');
+  // Load saved state
+  const savedState = loadState();
+
+  if (savedState) {
+    // Restore from localStorage
+    restoreState(savedState);
+  } else {
+    // Set initial features based on performance mode
+    updateFeaturesFromPerformance('balanced');
+  }
 
   // Build initial index
   rebuildIndex();
 
   // Set up event listeners
   const searchInput = document.getElementById('searchInput');
-  searchInput.addEventListener('input', debounce(handleSearch, 150));
+  searchInput.addEventListener('input', debounce(() => {
+    handleSearch();
+    saveState(); // Auto-save on search
+  }, 150));
+
+  // Auto-save on any form change
+  setupAutoSave();
 
   console.log('✅ Dashboard ready!');
+}
+
+// Setup auto-save listeners
+function setupAutoSave() {
+  // Dictionary change
+  document.getElementById('dictionarySelect').addEventListener('change', saveState);
+
+  // Performance mode change
+  document.querySelectorAll('input[name="performance"]').forEach(radio => {
+    radio.addEventListener('change', saveState);
+  });
+
+  // Feature checkboxes
+  document.querySelectorAll('.feature-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', saveState);
+  });
+
+  // Advanced settings sliders
+  ['maxResults', 'fuzzyThreshold', 'maxEditDistance', 'minQueryLength'].forEach(id => {
+    document.getElementById(id).addEventListener('change', saveState);
+  });
+
+  // Debug toggle
+  document.getElementById('debugToggle').addEventListener('change', saveState);
 }
 
 // Rebuild index with current configuration
@@ -354,6 +501,7 @@ window.changeDictionary = function () {
   currentConfig.languages = dict.languages;
 
   rebuildIndex();
+  saveState();
 };
 
 // Update configuration
@@ -373,6 +521,7 @@ window.updateConfig = function () {
   currentConfig.minQueryLength = parseInt(document.getElementById('minQueryLength').value);
 
   rebuildIndex();
+  saveState();
 };
 
 // Update features based on performance mode
@@ -435,6 +584,7 @@ window.resetConfig = function () {
   };
 
   rebuildIndex();
+  saveState();
 };
 
 // Clear search
@@ -443,6 +593,7 @@ window.clearSearch = function () {
   showNoResults();
   document.getElementById('debugInfo').classList.add('hidden');
   document.getElementById('debugToggle').checked = false;
+  saveState();
 };
 
 // Utility functions

@@ -245,7 +245,33 @@ export class EnglishProcessor extends BaseLanguageProcessor {
    * English word endings
    */
   protected getCommonEndings(): string[] {
-    return ["s", "es", "ed", "ing", "er", "est", "ly", "tion", "sion", "ness", "ment", "able", "ible", "ful", "less", "ous", "ious", "al", "ial", "ic", "ive", "ary", "ery", "ory"];
+    return [
+      //
+      "s",
+      "es",
+      "ed",
+      "ing",
+      "er",
+      "est",
+      "ly",
+      "tion",
+      "sion",
+      "ness",
+      "ment",
+      "able",
+      "ible",
+      "ful",
+      "less",
+      "ous",
+      "ious",
+      "al",
+      "ial",
+      "ic",
+      "ive",
+      "ary",
+      "ery",
+      "ory",
+    ];
   }
 
   /**

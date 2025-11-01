@@ -38,7 +38,7 @@ export interface FuzzyConfig {
   /** Features to enable */
   features: FuzzyFeature[];
   /** Performance mode */
-  performance: 'fast' | 'balanced' | 'comprehensive';
+  performance: "fast" | "balanced" | "comprehensive";
   /** Maximum number of results (default: 5) */
   maxResults: number;
   /** Minimum query length (default: 2) */
@@ -55,15 +55,15 @@ export interface FuzzyConfig {
   customNormalizer?: (word: string) => string;
 }
 
-export type FuzzyFeature = 
-  | 'phonetic'           // Phonetic matching
-  | 'compound'           // Compound word splitting
-  | 'synonyms'           // Synonym matching
-  | 'keyboard-neighbors' // Keyboard neighbor typos
-  | 'partial-words'      // Partial word matching
-  | 'missing-letters'    // Handle missing letters
-  | 'extra-letters'      // Handle extra letters
-  | 'transpositions';    // Handle letter transpositions
+export type FuzzyFeature =
+  | "phonetic" // Phonetic matching
+  | "compound" // Compound word splitting
+  | "synonyms" // Synonym matching
+  | "keyboard-neighbors" // Keyboard neighbor typos
+  | "partial-words" // Partial word matching
+  | "missing-letters" // Handle missing letters
+  | "extra-letters" // Handle extra letters
+  | "transpositions"; // Handle letter transpositions
 
 export interface LanguageProcessor {
   /** Language identifier */
@@ -72,7 +72,7 @@ export interface LanguageProcessor {
   readonly displayName: string;
   /** Supported features for this language */
   readonly supportedFeatures: FuzzyFeature[];
-  
+
   /** Normalize text for this language */
   normalize(text: string): string;
   /** Generate phonetic code */
@@ -102,15 +102,15 @@ export interface SearchMatch {
   language: string;
 }
 
-export type MatchType = 
-  | 'exact'              // Exact match
-  | 'prefix'             // Prefix match
-  | 'substring'          // Substring match
-  | 'fuzzy'              // Fuzzy/edit distance match
-  | 'phonetic'           // Phonetic similarity match
-  | 'synonym'            // Synonym match
-  | 'compound'           // Compound word component match
-  | 'ngram';             // N-gram partial match
+export type MatchType =
+  | "exact" // Exact match
+  | "prefix" // Prefix match
+  | "substring" // Substring match
+  | "fuzzy" // Fuzzy/edit distance match
+  | "phonetic" // Phonetic similarity match
+  | "synonym" // Synonym match
+  | "compound" // Compound word component match
+  | "ngram"; // N-gram partial match
 
 export interface BuildIndexOptions {
   /** Configuration for the index */

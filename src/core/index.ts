@@ -10,6 +10,9 @@ export function buildFuzzyIndex(words: string[] = [], options: BuildIndexOptions
   const config = mergeConfig(options.config);
   validateConfig(config);
 
+  // Convert features array to Set for O(1) lookup performance
+  const featureSet = new Set(config.features);
+
   const languageProcessors = options.languageProcessors || LanguageRegistry.getProcessors(config.languages);
 
   if (languageProcessors.length === 0) {
@@ -45,7 +48,7 @@ export function buildFuzzyIndex(words: string[] = [], options: BuildIndexOptions
 
     // Process with each language processor
     for (const processor of languageProcessors) {
-      processWordWithProcessor(trimmedWord, processor, index, config);
+      processWordWithProcessor(trimmedWord, processor, index, config, featureSet);
     }
 
     processed++;
@@ -60,7 +63,7 @@ export function buildFuzzyIndex(words: string[] = [], options: BuildIndexOptions
 /**
  * Process a word with a specific language processor
  */
-function processWordWithProcessor(word: string, processor: LanguageProcessor, index: FuzzyIndex, config: FuzzyConfig): void {
+function processWordWithProcessor(word: string, processor: LanguageProcessor, index: FuzzyIndex, config: FuzzyConfig, featureSet: Set<string>): void {
   const normalized = processor.normalize(word);
 
   // Add base word mapping
@@ -70,7 +73,7 @@ function processWordWithProcessor(word: string, processor: LanguageProcessor, in
   addToVariantMap(index.variantToBase, word, word);
 
   // Generate and index variants
-  if (config.features.includes("partial-words")) {
+  if (featureSet.has("partial-words")) {
     const variants = processor.getWordVariants(word);
     variants.forEach((variant) => {
       addToVariantMap(index.variantToBase, variant, word);
@@ -78,7 +81,7 @@ function processWordWithProcessor(word: string, processor: LanguageProcessor, in
   }
 
   // Generate phonetic codes
-  if (config.features.includes("phonetic") && processor.supportedFeatures.includes("phonetic")) {
+  if (featureSet.has("phonetic") && processor.supportedFeatures.includes("phonetic")) {
     const phoneticCode = processor.getPhoneticCode(word);
     if (phoneticCode) {
       addToVariantMap(index.phoneticToBase, phoneticCode, word);
@@ -92,7 +95,7 @@ function processWordWithProcessor(word: string, processor: LanguageProcessor, in
   });
 
   // Handle compound words
-  if (config.features.includes("compound") && processor.supportedFeatures.includes("compound")) {
+  if (featureSet.has("compound") && processor.supportedFeatures.includes("compound")) {
     const compoundParts = processor.splitCompoundWords(word);
     compoundParts.forEach((part) => {
       if (part !== word) {
@@ -102,7 +105,7 @@ function processWordWithProcessor(word: string, processor: LanguageProcessor, in
   }
 
   // Add synonyms
-  if (config.features.includes("synonyms")) {
+  if (featureSet.has("synonyms")) {
     const synonyms = processor.getSynonyms(normalized);
     synonyms.forEach((synonym) => {
       addToVariantMap(index.synonymMap, synonym, word);

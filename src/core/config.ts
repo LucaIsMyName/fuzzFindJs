@@ -5,12 +5,12 @@ import type { FuzzyConfig, FuzzyFeature } from "./types.js";
  * Provides sensible defaults that work out of the box
  */
 export const DEFAULT_CONFIG: FuzzyConfig = {
-  languages: ["german"],
+  languages: ["english"],
   features: ["phonetic", "compound", "synonyms", "keyboard-neighbors", "partial-words", "missing-letters", "extra-letters", "transpositions"],
   performance: "balanced",
-  maxResults: 5,
+  maxResults: 10,
   minQueryLength: 2,
-  fuzzyThreshold: 0.8,
+  fuzzyThreshold: 0.75,
   maxEditDistance: 2,
   ngramSize: 3,
 };
