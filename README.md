@@ -1173,3 +1173,8 @@ MIT © Luca Mack
 - **[PUBLISHING.md](./PUBLISHING.md)** - NPM publishing guide
 - **[CHANGELOG.md](./CHANGELOG.md)** - Version history and changes
 - **[LOCALSTORAGE_FEATURE.md](./LOCALSTORAGE_FEATURE.md)** - Demo persistence feature details
+
+## To Do's
+
+- [ ] Add (optional) dictionary imports for english, german ,spanish, france, ... as json files with the eg 500 most common expressions to be used as dictionary
+  - [ ] implemenent a native way to use these dictionary ON top of your own OR instead
