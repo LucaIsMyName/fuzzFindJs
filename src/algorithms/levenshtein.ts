@@ -7,11 +7,7 @@
  * Calculate Levenshtein distance with maximum threshold
  * Returns early if distance exceeds maxDistance for performance
  */
-export function calculateLevenshteinDistance(
-  str1: string,
-  str2: string,
-  maxDistance: number = Infinity
-): number {
+export function calculateLevenshteinDistance(str1: string, str2: string, maxDistance: number = Infinity): number {
   const len1 = str1.length;
   const len2 = str2.length;
 
@@ -39,11 +35,11 @@ export function calculateLevenshteinDistance(
 
     for (let j = 1; j <= len2; j++) {
       const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
-      
+
       currentRow[j] = Math.min(
-        currentRow[j - 1] + 1,     // insertion
-        previousRow[j] + 1,        // deletion
-        previousRow[j - 1] + cost  // substitution
+        currentRow[j - 1] + 1, // insertion
+        previousRow[j] + 1, // deletion
+        previousRow[j - 1] + cost // substitution
       );
 
       minInRow = Math.min(minInRow, currentRow[j]);
@@ -65,11 +61,7 @@ export function calculateLevenshteinDistance(
  * Calculate Damerau-Levenshtein distance (includes transpositions)
  * More expensive but handles character swaps
  */
-export function calculateDamerauLevenshteinDistance(
-  str1: string,
-  str2: string,
-  maxDistance: number = Infinity
-): number {
+export function calculateDamerauLevenshteinDistance(str1: string, str2: string, maxDistance: number = Infinity): number {
   const len1 = str1.length;
   const len2 = str2.length;
 
@@ -104,12 +96,12 @@ export function calculateDamerauLevenshteinDistance(
 
   for (let i = 1; i <= len1; i++) {
     let lastMatchCol = 0;
-    
+
     for (let j = 1; j <= len2; j++) {
       const char1 = str1[i - 1];
       const char2 = str2[j - 1];
       const lastMatchRow = charMap.get(char2) || 0;
-      
+
       let cost = 1;
       if (char1 === char2) {
         cost = 0;
@@ -117,9 +109,9 @@ export function calculateDamerauLevenshteinDistance(
       }
 
       H[i + 1][j + 1] = Math.min(
-        H[i][j] + cost,                    // substitution
-        H[i + 1][j] + 1,                   // insertion
-        H[i][j + 1] + 1,                   // deletion
+        H[i][j] + cost, // substitution
+        H[i + 1][j] + 1, // insertion
+        H[i][j + 1] + 1, // deletion
         H[lastMatchRow][lastMatchCol] + (i - lastMatchRow - 1) + 1 + (j - lastMatchCol - 1) // transposition
       );
     }
@@ -135,11 +127,7 @@ export function calculateDamerauLevenshteinDistance(
  * Fast approximate string matching using n-gram similarity
  * Much faster than edit distance for initial filtering
  */
-export function calculateNgramSimilarity(
-  str1: string,
-  str2: string,
-  n: number = 3
-): number {
+export function calculateNgramSimilarity(str1: string, str2: string, n: number = 3): number {
   if (str1 === str2) return 1.0;
   if (str1.length === 0 || str2.length === 0) return 0.0;
 
@@ -152,7 +140,7 @@ export function calculateNgramSimilarity(
   const set1 = new Set(ngrams1);
   const set2 = new Set(ngrams2);
 
-  const intersection = new Set([...set1].filter(x => set2.has(x)));
+  const intersection = new Set([...set1].filter((x) => set2.has(x)));
   const union = new Set([...set1, ...set2]);
 
   return intersection.size / union.size;
@@ -163,7 +151,7 @@ export function calculateNgramSimilarity(
  */
 function generateNgrams(str: string, n: number): string[] {
   if (str.length < n) return [str];
-  
+
   const ngrams: string[] = [];
   for (let i = 0; i <= str.length - n; i++) {
     ngrams.push(str.slice(i, i + n));
@@ -174,10 +162,7 @@ function generateNgrams(str: string, n: number): string[] {
 /**
  * Calculate similarity score (0-1) from edit distance
  */
-export function distanceToSimilarity(
-  distance: number,
-  maxLength: number
-): number {
+export function distanceToSimilarity(distance: number, maxLength: number): number {
   if (maxLength === 0) return distance === 0 ? 1.0 : 0.0;
   return Math.max(0, 1 - distance / maxLength);
 }
@@ -185,26 +170,21 @@ export function distanceToSimilarity(
 /**
  * Check if strings are similar within threshold using fast approximation
  */
-export function areStringsSimilar(
-  str1: string,
-  str2: string,
-  threshold: number = 0.8,
-  maxDistance: number = 2
-): boolean {
+export function areStringsSimilar(str1: string, str2: string, threshold: number = 0.8, maxDistance: number = 2): boolean {
   // Quick exact match
   if (str1 === str2) return true;
-  
+
   // Quick length check
   const maxLen = Math.max(str1.length, str2.length);
   if (Math.abs(str1.length - str2.length) > maxDistance) return false;
-  
+
   // Use n-gram similarity for fast approximation
   const ngramSim = calculateNgramSimilarity(str1, str2);
   if (ngramSim < threshold - 0.2) return false; // Early rejection
-  
+
   // Calculate actual edit distance only if n-gram similarity is promising
   const distance = calculateLevenshteinDistance(str1, str2, maxDistance);
   const similarity = distanceToSimilarity(distance, maxLen);
-  
+
   return similarity >= threshold;
 }

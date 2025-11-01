@@ -1,18 +1,18 @@
-import type { LanguageProcessor } from '../core/types.js';
-import { GermanProcessor } from './german/GermanProcessor.js';
-import { EnglishProcessor } from './english/EnglishProcessor.js';
-import { SpanishProcessor } from './spanish/SpanishProcessor.js';
-import { FrenchProcessor } from './french/FrenchProcessor.js';
+import type { LanguageProcessor } from "../core/types.js";
+import { GermanProcessor } from "./german/GermanProcessor.js";
+import { EnglishProcessor } from "./english/EnglishProcessor.js";
+import { SpanishProcessor } from "./spanish/SpanishProcessor.js";
+import { FrenchProcessor } from "./french/FrenchProcessor.js";
 
 /**
  * Registry of all available language processors
  */
 export class LanguageRegistry {
   private static processors = new Map<string, LanguageProcessor>([
-    ['german', new GermanProcessor()],
-    ['english', new EnglishProcessor()],
-    ['spanish', new SpanishProcessor()],
-    ['french', new FrenchProcessor()]
+    ["german", new GermanProcessor()],
+    ["english", new EnglishProcessor()],
+    ["spanish", new SpanishProcessor()],
+    ["french", new FrenchProcessor()],
   ]);
 
   /**
@@ -26,9 +26,7 @@ export class LanguageRegistry {
    * Get multiple language processors
    */
   static getProcessors(languages: string[]): LanguageProcessor[] {
-    return languages
-      .map(lang => this.getProcessor(lang))
-      .filter((processor): processor is LanguageProcessor => processor !== undefined);
+    return languages.map((lang) => this.getProcessor(lang)).filter((processor): processor is LanguageProcessor => processor !== undefined);
   }
 
   /**
@@ -60,17 +58,17 @@ export class LanguageRegistry {
     displayName: string;
     supportedFeatures: string[];
   }> {
-    return Array.from(this.processors.values()).map(processor => ({
+    return Array.from(this.processors.values()).map((processor) => ({
       language: processor.language,
       displayName: processor.displayName,
-      supportedFeatures: processor.supportedFeatures
+      supportedFeatures: processor.supportedFeatures,
     }));
   }
 }
 
 // Export individual processors for direct use
-export { GermanProcessor } from './german/GermanProcessor.js';
-export { EnglishProcessor } from './english/EnglishProcessor.js';
-export { SpanishProcessor } from './spanish/SpanishProcessor.js';
-export { FrenchProcessor } from './french/FrenchProcessor.js';
-export { BaseLanguageProcessor } from './base/LanguageProcessor.js';
+export { GermanProcessor } from "./german/GermanProcessor.js";
+export { EnglishProcessor } from "./english/EnglishProcessor.js";
+export { SpanishProcessor } from "./spanish/SpanishProcessor.js";
+export { FrenchProcessor } from "./french/FrenchProcessor.js";
+export { BaseLanguageProcessor } from "./base/LanguageProcessor.js";

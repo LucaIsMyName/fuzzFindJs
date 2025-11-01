@@ -1,5 +1,5 @@
-import { BaseLanguageProcessor } from '../base/LanguageProcessor.js';
-import type { FuzzyFeature } from '../../core/types.js';
+import { BaseLanguageProcessor } from "../base/LanguageProcessor.js";
+import type { FuzzyFeature } from "../../core/types.js";
 
 /**
  * English language processor with specialized features:
@@ -9,187 +9,188 @@ import type { FuzzyFeature } from '../../core/types.js';
  * - Comprehensive synonym support
  */
 export class EnglishProcessor extends BaseLanguageProcessor {
-  readonly language = 'english';
-  readonly displayName = 'English';
+  readonly language = "english";
+  readonly displayName = "English";
   readonly supportedFeatures: FuzzyFeature[] = [
-    'phonetic',
-    'synonyms',
-    'keyboard-neighbors',
-    'partial-words',
-    'missing-letters',
-    'extra-letters',
-    'transpositions'
+    //
+    "phonetic",
+    "synonyms",
+    "keyboard-neighbors",
+    "partial-words",
+    "missing-letters",
+    "extra-letters",
+    "transpositions",
   ];
 
   /**
    * English text normalization with contraction handling
    */
   normalize(text: string): string {
-    return text
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, ' ')
-      // Handle common contractions
-      .replace(/won't/g, 'will not')
-      .replace(/can't/g, 'cannot')
-      .replace(/n't/g, ' not')
-      .replace(/'re/g, ' are')
-      .replace(/'ve/g, ' have')
-      .replace(/'ll/g, ' will')
-      .replace(/'d/g, ' would')
-      .replace(/'m/g, ' am')
-      .replace(/'/g, ''); // Remove remaining apostrophes
+    return (
+      text
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, " ")
+        // Handle common contractions
+        .replace(/won't/g, "will not")
+        .replace(/can't/g, "cannot")
+        .replace(/n't/g, " not")
+        .replace(/'re/g, " are")
+        .replace(/'ve/g, " have")
+        .replace(/'ll/g, " will")
+        .replace(/'d/g, " would")
+        .replace(/'m/g, " am")
+        .replace(/'/g, "")
+    ); // Remove remaining apostrophes
   }
 
   /**
    * Simplified Metaphone algorithm for English phonetic matching
    */
   getPhoneticCode(word: string): string {
-    const normalized = this.normalize(word).replace(/[^a-z]/g, '');
-    if (normalized.length === 0) return '';
+    const normalized = this.normalize(word).replace(/[^a-z]/g, "");
+    if (normalized.length === 0) return "";
 
-    let metaphone = '';
+    let metaphone = "";
     let current = 0;
     const length = normalized.length;
 
     // Handle initial letters
-    if (normalized.startsWith('gn') || normalized.startsWith('kn') || 
-        normalized.startsWith('pn') || normalized.startsWith('wr')) {
+    if (normalized.startsWith("gn") || normalized.startsWith("kn") || normalized.startsWith("pn") || normalized.startsWith("wr")) {
       current = 1;
     }
 
     while (current < length && metaphone.length < 4) {
       const char = normalized[current];
-      const next = current + 1 < length ? normalized[current + 1] : '';
-      const prev = current > 0 ? normalized[current - 1] : '';
+      const next = current + 1 < length ? normalized[current + 1] : "";
+      const prev = current > 0 ? normalized[current - 1] : "";
 
       switch (char) {
-        case 'a':
-        case 'e':
-        case 'i':
-        case 'o':
-        case 'u':
+        case "a":
+        case "e":
+        case "i":
+        case "o":
+        case "u":
           if (current === 0) metaphone += char.toUpperCase();
           break;
-        case 'b':
-          if (current === length - 1 && prev === 'm') {
+        case "b":
+          if (current === length - 1 && prev === "m") {
             // Silent B at end after M
           } else {
-            metaphone += 'B';
+            metaphone += "B";
           }
           break;
-        case 'c':
-          if (next === 'h') {
-            metaphone += 'X';
+        case "c":
+          if (next === "h") {
+            metaphone += "X";
             current++;
-          } else if (next === 'i' || next === 'e' || next === 'y') {
-            metaphone += 'S';
+          } else if (next === "i" || next === "e" || next === "y") {
+            metaphone += "S";
           } else {
-            metaphone += 'K';
+            metaphone += "K";
           }
           break;
-        case 'd':
-          if (next === 'g') {
-            metaphone += 'J';
+        case "d":
+          if (next === "g") {
+            metaphone += "J";
             current++;
           } else {
-            metaphone += 'T';
+            metaphone += "T";
           }
           break;
-        case 'f':
-          metaphone += 'F';
+        case "f":
+          metaphone += "F";
           break;
-        case 'g':
-          if (next === 'h' && current !== 0) {
+        case "g":
+          if (next === "h" && current !== 0) {
             // Silent GH
-          } else if (next === 'n') {
-            metaphone += 'N';
+          } else if (next === "n") {
+            metaphone += "N";
             current++;
-          } else if (next === 'i' || next === 'e' || next === 'y') {
-            metaphone += 'J';
+          } else if (next === "i" || next === "e" || next === "y") {
+            metaphone += "J";
           } else {
-            metaphone += 'K';
+            metaphone += "K";
           }
           break;
-        case 'h':
-          if (current === 0 || 'aeiou'.includes(prev) || 'aeiou'.includes(next)) {
-            metaphone += 'H';
+        case "h":
+          if (current === 0 || "aeiou".includes(prev) || "aeiou".includes(next)) {
+            metaphone += "H";
           }
           break;
-        case 'j':
-          metaphone += 'J';
+        case "j":
+          metaphone += "J";
           break;
-        case 'k':
-          if (prev !== 'c') {
-            metaphone += 'K';
+        case "k":
+          if (prev !== "c") {
+            metaphone += "K";
           }
           break;
-        case 'l':
-          metaphone += 'L';
+        case "l":
+          metaphone += "L";
           break;
-        case 'm':
-          metaphone += 'M';
+        case "m":
+          metaphone += "M";
           break;
-        case 'n':
-          metaphone += 'N';
+        case "n":
+          metaphone += "N";
           break;
-        case 'p':
-          if (next === 'h') {
-            metaphone += 'F';
-            current++;
-          } else {
-            metaphone += 'P';
-          }
-          break;
-        case 'q':
-          metaphone += 'K';
-          break;
-        case 'r':
-          metaphone += 'R';
-          break;
-        case 's':
-          if (next === 'h') {
-            metaphone += 'X';
+        case "p":
+          if (next === "h") {
+            metaphone += "F";
             current++;
           } else {
-            metaphone += 'S';
+            metaphone += "P";
           }
           break;
-        case 't':
-          if (next === 'h') {
-            metaphone += '0';
+        case "q":
+          metaphone += "K";
+          break;
+        case "r":
+          metaphone += "R";
+          break;
+        case "s":
+          if (next === "h") {
+            metaphone += "X";
             current++;
-          } else if (next === 'i' && current + 2 < length && 
-                     (normalized[current + 2] === 'a' || normalized[current + 2] === 'o')) {
-            metaphone += 'X';
           } else {
-            metaphone += 'T';
+            metaphone += "S";
           }
           break;
-        case 'v':
-          metaphone += 'F';
-          break;
-        case 'w':
-          if ('aeiou'.includes(next)) {
-            metaphone += 'W';
+        case "t":
+          if (next === "h") {
+            metaphone += "0";
+            current++;
+          } else if (next === "i" && current + 2 < length && (normalized[current + 2] === "a" || normalized[current + 2] === "o")) {
+            metaphone += "X";
+          } else {
+            metaphone += "T";
           }
           break;
-        case 'x':
-          metaphone += 'KS';
+        case "v":
+          metaphone += "F";
           break;
-        case 'y':
-          if ('aeiou'.includes(next)) {
-            metaphone += 'Y';
+        case "w":
+          if ("aeiou".includes(next)) {
+            metaphone += "W";
           }
           break;
-        case 'z':
-          metaphone += 'S';
+        case "x":
+          metaphone += "KS";
+          break;
+        case "y":
+          if ("aeiou".includes(next)) {
+            metaphone += "Y";
+          }
+          break;
+        case "z":
+          metaphone += "S";
           break;
       }
       current++;
     }
 
-    return metaphone || 'A';
+    return metaphone || "A";
   }
 
   /**
@@ -198,7 +199,7 @@ export class EnglishProcessor extends BaseLanguageProcessor {
   getWordVariants(word: string): string[] {
     const variants = new Set<string>();
     const normalized = this.normalize(word);
-    
+
     variants.add(normalized);
     variants.add(word);
 
@@ -211,23 +212,23 @@ export class EnglishProcessor extends BaseLanguageProcessor {
     }
 
     // Add plural/singular variants
-    if (normalized.endsWith('s') && normalized.length > 3) {
+    if (normalized.endsWith("s") && normalized.length > 3) {
       variants.add(normalized.slice(0, -1));
     }
-    if (!normalized.endsWith('s')) {
-      variants.add(normalized + 's');
+    if (!normalized.endsWith("s")) {
+      variants.add(normalized + "s");
     }
 
     // Add -ing/-ed variants
-    if (normalized.endsWith('ing') && normalized.length > 5) {
+    if (normalized.endsWith("ing") && normalized.length > 5) {
       const base = normalized.slice(0, -3);
       variants.add(base);
-      variants.add(base + 'e'); // handle dropped 'e'
+      variants.add(base + "e"); // handle dropped 'e'
     }
-    if (normalized.endsWith('ed') && normalized.length > 4) {
+    if (normalized.endsWith("ed") && normalized.length > 4) {
       const base = normalized.slice(0, -2);
       variants.add(base);
-      variants.add(base + 'e'); // handle dropped 'e'
+      variants.add(base + "e"); // handle dropped 'e'
     }
 
     // Add partial variants
@@ -244,11 +245,7 @@ export class EnglishProcessor extends BaseLanguageProcessor {
    * English word endings
    */
   protected getCommonEndings(): string[] {
-    return [
-      's', 'es', 'ed', 'ing', 'er', 'est', 'ly', 'tion', 'sion',
-      'ness', 'ment', 'able', 'ible', 'ful', 'less', 'ous', 'ious',
-      'al', 'ial', 'ic', 'ive', 'ary', 'ery', 'ory'
-    ];
+    return ["s", "es", "ed", "ing", "er", "est", "ly", "tion", "sion", "ness", "ment", "able", "ible", "ful", "less", "ous", "ious", "al", "ial", "ic", "ive", "ary", "ery", "ory"];
   }
 
   /**
@@ -256,24 +253,24 @@ export class EnglishProcessor extends BaseLanguageProcessor {
    */
   getSynonyms(word: string): string[] {
     const synonymMap: Record<string, string[]> = {
-      'doctor': ['physician', 'medic', 'doc', 'md'],
-      'hospital': ['clinic', 'medical center', 'infirmary'],
-      'school': ['academy', 'institution', 'college', 'university'],
-      'car': ['vehicle', 'automobile', 'auto'],
-      'house': ['home', 'residence', 'dwelling', 'building'],
-      'street': ['road', 'avenue', 'lane', 'boulevard'],
-      'city': ['town', 'municipality', 'urban area'],
-      'work': ['job', 'employment', 'occupation', 'career'],
-      'money': ['cash', 'currency', 'funds', 'capital'],
-      'time': ['duration', 'period', 'moment', 'hour'],
-      'big': ['large', 'huge', 'enormous', 'massive', 'giant'],
-      'small': ['little', 'tiny', 'miniature', 'petite'],
-      'fast': ['quick', 'rapid', 'speedy', 'swift'],
-      'slow': ['sluggish', 'gradual', 'leisurely'],
-      'good': ['excellent', 'great', 'wonderful', 'fine'],
-      'bad': ['poor', 'terrible', 'awful', 'horrible'],
-      'happy': ['joyful', 'cheerful', 'glad', 'pleased'],
-      'sad': ['unhappy', 'depressed', 'melancholy', 'sorrowful']
+      doctor: ["physician", "medic", "doc", "md"],
+      hospital: ["clinic", "medical center", "infirmary"],
+      school: ["academy", "institution", "college", "university"],
+      car: ["vehicle", "automobile", "auto"],
+      house: ["home", "residence", "dwelling", "building"],
+      street: ["road", "avenue", "lane", "boulevard"],
+      city: ["town", "municipality", "urban area"],
+      work: ["job", "employment", "occupation", "career"],
+      money: ["cash", "currency", "funds", "capital"],
+      time: ["duration", "period", "moment", "hour"],
+      big: ["large", "huge", "enormous", "massive", "giant"],
+      small: ["little", "tiny", "miniature", "petite"],
+      fast: ["quick", "rapid", "speedy", "swift"],
+      slow: ["sluggish", "gradual", "leisurely"],
+      good: ["excellent", "great", "wonderful", "fine"],
+      bad: ["poor", "terrible", "awful", "horrible"],
+      happy: ["joyful", "cheerful", "glad", "pleased"],
+      sad: ["unhappy", "depressed", "melancholy", "sorrowful"],
     };
 
     const normalized = this.normalize(word);

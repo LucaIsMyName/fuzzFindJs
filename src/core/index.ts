@@ -66,6 +66,8 @@ function processWordWithProcessor(word: string, processor: LanguageProcessor, in
   // Add base word mapping
   addToVariantMap(index.variantToBase, normalized, word);
   addToVariantMap(index.variantToBase, word.toLowerCase(), word);
+  // Also add the original word as-is for exact matching
+  addToVariantMap(index.variantToBase, word, word);
 
   // Generate and index variants
   if (config.features.includes("partial-words")) {
