@@ -23,16 +23,16 @@ describe('FuzzyFindJS Basic Tests', () => {
     const index = buildFuzzyIndex(testDictionary);
     const results = getSuggestions(index, 'Schule', 5);
     
-    console.log('Debug - Exact match results:', results.map(r => ({
+    console.log('Debug match types:', results.map(r => ({
       display: r.display,
       score: r.score,
-      language: r.language
+      // @ts-ignore
+      matchType: r._debug_matchType
     })));
     
     expect(results.length).toBeGreaterThan(0);
     expect(results[0].display).toBe('Schule');
-    // For now, let's just check that the score is reasonable
-    expect(results[0].score).toBeGreaterThan(0.9);
+    expect(results[0].score).toBeGreaterThan(0.9); // Temporarily relax this
   });
 
   it('should find fuzzy matches', () => {

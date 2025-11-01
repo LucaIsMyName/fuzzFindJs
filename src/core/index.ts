@@ -338,9 +338,13 @@ function findFuzzyMatches(query: string, index: FuzzyIndex, matches: Map<string,
 /**
  * Create a suggestion result from a search match
  */
-function createSuggestionResult(match: SearchMatch, originalQuery: string, threshold: number): SuggestionResult | null {
+function createSuggestionResult(
+  match: SearchMatch,
+  originalQuery: string,
+  threshold: number
+): SuggestionResult | null {
   const score = calculateMatchScore(match, originalQuery);
-
+  
   if (score < threshold) {
     return null;
   }
@@ -348,9 +352,11 @@ function createSuggestionResult(match: SearchMatch, originalQuery: string, thres
   return {
     display: match.word,
     baseWord: match.word,
-    isSynonym: match.matchType === "synonym",
+    isSynonym: match.matchType === 'synonym',
     score,
     language: match.language,
+    // @ts-ignore - temporary debug property
+    _debug_matchType: match.matchType
   };
 }
 
