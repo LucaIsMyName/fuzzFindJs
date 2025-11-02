@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FuzzyFindJS - AJAX Product Search Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../dist/umd/fuzzyfindjs.min.js"></script>
+  <style>
+    /* Match type highlights */
+    .highlight-exact { background-color: #ef4444; color: white; padding: 1px 3px; border-radius: 2px; font-weight: 600; }
+    .highlight-fuzzy { background-color: #3b82f6; color: white; padding: 1px 3px; border-radius: 2px; }
+    .highlight-phonetic { background-color: #a78bfa; color: white; padding: 1px 3px; border-radius: 2px; }
+    .highlight-synonym { background-color: #facc15; color: black; padding: 1px 3px; border-radius: 2px; }
+    .highlight-prefix { background-color: #34d399; color: white; padding: 1px 3px; border-radius: 2px; }
+    .highlight-compound { background-color: #f97316; color: white; padding: 1px 3px; border-radius: 2px; }
+    .highlight-ngram { background-color: #8b5cf6; color: white; padding: 1px 3px; border-radius: 2px; }
+    
+    /* Product card hover effect */
+    .product-card {
+      transition: all 0.2s ease;
+    }
+    .product-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    /* Loading animation */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .loading {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    /* Custom scrollbar */
+    .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="container mx-auto px-4 py-8 max-w-7xl">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-4xl font-bold text-gray-900 mb-2">🛍️ Product Search Demo</h1>
+      <p class="text-gray-600">Real-time fuzzy search across 1000+ products with match highlighting</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <!-- Search & Results (Left - 3 columns) -->
+      <div class="lg:col-span-3 space-y-6">
+        <!-- Search Bar -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div class="relative">
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="Search products... (try: laptop, phone, headset, gaming)"
+              class="w-full px-4 py-3 pl-12 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition"
+              autocomplete="off"
+            />
+            <svg class="absolute left-4 top-4 w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+          
+          <!-- Search Stats -->
+          <div class="mt-4 flex items-center justify-between text-sm">
+            <div class="text-gray-600">
+              <span id="resultCount" class="font-semibold text-gray-900">1000</span> products
+              <span id="searchTime" class="text-gray-500 ml-2"></span>
+            </div>
+            <button
+              id="clearBtn"
+              class="text-blue-600 hover:text-blue-800 font-medium"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div id="productsContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <!-- Products will be inserted here -->
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden text-center py-12">
+          <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p class="mt-4 text-gray-600">Loading products...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-12">
+          <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <p class="text-gray-600 text-lg">No products found</p>
+          <p class="text-gray-500 text-sm mt-2">Try a different search term</p>
+        </div>
+      </div>
+
+      <!-- Sidebar (Right - 1 column) -->
+      <div class="space-y-6">
+        <!-- Match Type Legend -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Match Types</h3>
+          <div class="space-y-2 text-sm">
+            <div class="flex items-center justify-between">
+              <span class="highlight-exact">Exact</span>
+              <span class="text-gray-600">100% match</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="highlight-fuzzy">Fuzzy</span>
+              <span class="text-gray-600">Typo-tolerant</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="highlight-phonetic">Phonetic</span>
+              <span class="text-gray-600">Sounds similar</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="highlight-prefix">Prefix</span>
+              <span class="text-gray-600">Starts with</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="highlight-synonym">Synonym</span>
+              <span class="text-gray-600">Similar meaning</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="highlight-compound">Compound</span>
+              <span class="text-gray-600">Word parts</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search Settings -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Settings</h3>
+          
+          <div class="space-y-4">
+            <!-- Performance Mode -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Performance</label>
+              <select id="performanceMode" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                <option value="fast" selected>Fast</option>
+                <option value="balanced">Balanced</option>
+                <option value="comprehensive">Comprehensive</option>
+              </select>
+            </div>
+
+            <!-- Max Results -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Max Results: <span id="maxResultsValue" class="text-blue-600">50</span>
+              </label>
+              <input
+                type="range"
+                id="maxResults"
+                min="10"
+                max="200"
+                value="50"
+                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+
+            <!-- Fuzzy Threshold -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Threshold: <span id="thresholdValue" class="text-blue-600">0.6</span>
+              </label>
+              <input
+                type="range"
+                id="threshold"
+                min="0"
+                max="1"
+                step="0.1"
+                value="0.6"
+                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Statistics</h3>
+          <div class="space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-600">Total Products:</span>
+              <span id="totalProducts" class="font-semibold">1000</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Showing:</span>
+              <span id="showingProducts" class="font-semibold">1000</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Search Time:</span>
+              <span id="searchTimeMs" class="font-semibold">-</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Index Size:</span>
+              <span id="indexSize" class="font-semibold">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Product database generator
+    function generateProducts(count = 1000) {
+      const categories = ['Electronics', 'Computers', 'Audio', 'Gaming', 'Accessories', 'Smart Home', 'Wearables', 'Photography'];
+      const brands = ['TechPro', 'SmartGear', 'ProMax', 'EliteCore', 'NexGen', 'PrimeTech', 'UltraSound', 'GameMaster'];
+      const adjectives = ['Professional', 'Wireless', 'Premium', 'Ultra', 'Pro', 'Advanced', 'Smart', 'Digital', 'Portable', 'High-Performance'];
+      const products = [
+        'Laptop', 'Desktop', 'Monitor', 'Keyboard', 'Mouse', 'Headphones', 'Headset', 'Webcam', 'Microphone',
+        'Smartphone', 'Tablet', 'Smartwatch', 'Earbuds', 'Speaker', 'Charger', 'Cable', 'Adapter',
+        'Router', 'Camera', 'Drone', 'Console', 'Controller', 'VR Headset', 'Graphics Card', 'Processor',
+        'RAM', 'SSD', 'Hard Drive', 'Power Supply', 'Motherboard', 'Case', 'Fan', 'Cooler'
+      ];
+      
+      const colors = ['Black', 'White', 'Silver', 'Gray', 'Blue', 'Red', 'Green', 'Gold', 'Rose Gold'];
+      
+      const result = [];
+      
+      for (let i = 0; i < count; i++) {
+        const brand = brands[Math.floor(Math.random() * brands.length)];
+        const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+        const product = products[Math.floor(Math.random() * products.length)];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const category = categories[Math.floor(Math.random() * categories.length)];
+        
+        const name = `${brand} ${adj} ${product} ${color}`;
+        const price = (Math.random() * 1000 + 50).toFixed(2);
+        const rating = (Math.random() * 2 + 3).toFixed(1);
+        const reviews = Math.floor(Math.random() * 5000);
+        
+        result.push({
+          id: i + 1,
+          name,
+          category,
+          price: parseFloat(price),
+          rating: parseFloat(rating),
+          reviews,
+          inStock: Math.random() > 0.1
+        });
+      }
+      
+      return result;
+    }
+
+    // State
+    let products = [];
+    let fuzzyIndex = null;
+    let currentConfig = {
+      performance: 'fast',
+      maxResults: 50,
+      threshold: 0.6
+    };
+
+    // DOM Elements
+    const searchInput = document.getElementById('searchInput');
+    const productsContainer = document.getElementById('productsContainer');
+    const resultCount = document.getElementById('resultCount');
+    const searchTime = document.getElementById('searchTime');
+    const clearBtn = document.getElementById('clearBtn');
+    const loadingState = document.getElementById('loadingState');
+    const emptyState = document.getElementById('emptyState');
+    const performanceMode = document.getElementById('performanceMode');
+    const maxResults = document.getElementById('maxResults');
+    const maxResultsValue = document.getElementById('maxResultsValue');
+    const threshold = document.getElementById('threshold');
+    const thresholdValue = document.getElementById('thresholdValue');
+    const totalProducts = document.getElementById('totalProducts');
+    const showingProducts = document.getElementById('showingProducts');
+    const searchTimeMs = document.getElementById('searchTimeMs');
+    const indexSize = document.getElementById('indexSize');
+
+    // Initialize
+    async function init() {
+      loadingState.classList.remove('hidden');
+      productsContainer.classList.add('hidden');
+      
+      // Generate products
+      await new Promise(resolve => setTimeout(resolve, 100));
+      products = generateProducts(1000);
+      
+      // Build fuzzy index
+      const productNames = products.map(p => p.name);
+      const buildStart = performance.now();
+      
+      fuzzyIndex = FuzzyFindJS.buildFuzzyIndex(productNames, {
+        config: {
+          performance: currentConfig.performance,
+          maxResults: currentConfig.maxResults,
+          features: ['phonetic', 'compound', 'synonyms', 'partial-words', 'missing-letters', 'extra-letters']
+        }
+      });
+      
+      const buildTime = performance.now() - buildStart;
+      
+      // Update stats
+      totalProducts.textContent = products.length;
+      indexSize.textContent = `${(JSON.stringify(fuzzyIndex).length / 1024).toFixed(1)} KB`;
+      
+      // Show all products initially
+      loadingState.classList.add('hidden');
+      productsContainer.classList.remove('hidden');
+      displayProducts(products);
+    }
+
+    // Highlight matches in text
+    function highlightMatches(text, matchType) {
+      if (!matchType) return text;
+      
+      const words = text.split(/\s+/);
+      return words.map(word => {
+        return `<span class="highlight-${matchType}">${word}</span>`;
+      }).join(' ');
+    }
+
+    // Display products
+    function displayProducts(productsToShow, results = null) {
+      if (productsToShow.length === 0) {
+        productsContainer.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      
+      productsContainer.classList.remove('hidden');
+      emptyState.classList.add('hidden');
+      
+      // Create match map for highlighting
+      const matchMap = new Map();
+      if (results) {
+        results.forEach(result => {
+          matchMap.set(result.display, result._debug_matchType || 'exact');
+        });
+      }
+      
+      productsContainer.innerHTML = productsToShow.map(product => {
+        const matchType = matchMap.get(product.name);
+        const nameHtml = matchType ? highlightMatches(product.name, matchType) : product.name;
+        
+        return `
+          <div class="product-card bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:border-blue-300">
+            <!-- Product Image Placeholder -->
+            <div class="bg-gray-100 rounded-lg h-48 mb-4 flex items-center justify-center">
+              <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+              </svg>
+            </div>
+            
+            <!-- Product Info -->
+            <div class="space-y-2">
+              <h3 class="font-semibold text-gray-900 text-sm leading-tight" style="min-height: 2.5rem;">
+                ${nameHtml}
+              </h3>
+              
+              <div class="flex items-center justify-between text-xs text-gray-500">
+                <span class="bg-gray-100 px-2 py-1 rounded">${product.category}</span>
+                ${product.inStock 
+                  ? '<span class="text-green-600 font-medium">In Stock</span>' 
+                  : '<span class="text-red-600 font-medium">Out of Stock</span>'}
+              </div>
+              
+              <div class="flex items-center space-x-1">
+                <div class="flex">
+                  ${Array(5).fill(0).map((_, i) => 
+                    i < Math.floor(product.rating)
+                      ? '<svg class="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>'
+                      : '<svg class="w-4 h-4 text-gray-300 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>'
+                  ).join('')}
+                </div>
+                <span class="text-xs text-gray-500">(${product.reviews})</span>
+              </div>
+              
+              <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+                <span class="text-xl font-bold text-gray-900">$${product.price}</span>
+                <button class="px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition">
+                  Add to Cart
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      showingProducts.textContent = productsToShow.length;
+    }
+
+    // Perform search
+    function performSearch() {
+      const query = searchInput.value.trim();
+      
+      if (!query) {
+        displayProducts(products);
+        resultCount.textContent = products.length;
+        searchTime.textContent = '';
+        searchTimeMs.textContent = '-';
+        return;
+      }
+      
+      const searchStart = performance.now();
+      
+      const results = FuzzyFindJS.getSuggestions(
+        fuzzyIndex,
+        query,
+        currentConfig.maxResults,
+        {
+          fuzzyThreshold: currentConfig.threshold
+        }
+      );
+      
+      const searchDuration = performance.now() - searchStart;
+      
+      // Map results back to products
+      const matchedProducts = results.map(result => {
+        return products.find(p => p.name === result.display);
+      }).filter(Boolean);
+      
+      // Update UI
+      displayProducts(matchedProducts, results);
+      resultCount.textContent = matchedProducts.length;
+      searchTime.textContent = `(${searchDuration.toFixed(2)}ms)`;
+      searchTimeMs.textContent = `${searchDuration.toFixed(2)}ms`;
+    }
+
+    // Rebuild index with new config
+    function rebuildIndex() {
+      const productNames = products.map(p => p.name);
+      
+      fuzzyIndex = FuzzyFindJS.buildFuzzyIndex(productNames, {
+        config: {
+          performance: currentConfig.performance,
+          maxResults: currentConfig.maxResults,
+          features: ['phonetic', 'compound', 'synonyms', 'partial-words', 'missing-letters', 'extra-letters']
+        }
+      });
+      
+      performSearch();
+    }
+
+    // Event Listeners
+    searchInput.addEventListener('input', performSearch);
+    
+    clearBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      performSearch();
+    });
+
+    performanceMode.addEventListener('change', (e) => {
+      currentConfig.performance = e.target.value;
+      rebuildIndex();
+    });
+
+    maxResults.addEventListener('input', (e) => {
+      maxResultsValue.textContent = e.target.value;
+      currentConfig.maxResults = parseInt(e.target.value);
+      performSearch();
+    });
+
+    threshold.addEventListener('input', (e) => {
+      thresholdValue.textContent = parseFloat(e.target.value).toFixed(1);
+      currentConfig.threshold = parseFloat(e.target.value);
+      performSearch();
+    });
+
+    // Initialize app
+    init();
+  </script>
+</body>
+</html>

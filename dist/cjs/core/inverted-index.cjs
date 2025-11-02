@@ -225,9 +225,24 @@ function findNgramMatchesInverted(query, invertedIndex, documents, matches, lang
   });
 }
 function findFuzzyMatchesInverted(query, invertedIndex, documents, matches, processor, maxDistance, config) {
+  const queryLen = query.length;
+  const minLen = queryLen - maxDistance;
+  const maxLen = queryLen + maxDistance;
+  const useTranspositions = config.features?.includes("transpositions");
+  const MAX_FUZZY_CANDIDATES = 1e4;
+  let candidatesChecked = 0;
   for (const [term, posting] of invertedIndex.termToPostings.entries()) {
-    if (Math.abs(term.length - query.length) > maxDistance) continue;
-    const useTranspositions = config.features?.includes("transpositions");
+    const termLen = term.length;
+    if (termLen < minLen || termLen > maxLen) {
+      continue;
+    }
+    if (candidatesChecked >= MAX_FUZZY_CANDIDATES) {
+      break;
+    }
+    candidatesChecked++;
+    if (matches.size >= config.maxResults * 3) {
+      break;
+    }
     const distance = useTranspositions ? levenshtein.calculateDamerauLevenshteinDistance(query, term, maxDistance) : levenshtein.calculateLevenshteinDistance(query, term, maxDistance);
     if (distance <= maxDistance) {
       posting.docIds.forEach((docId) => {
