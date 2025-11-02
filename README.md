@@ -20,6 +20,7 @@ A powerful, multi-language optimized fuzzy search library with phonetic matching
 - 💾 **Index Serialization**: Save/load indices for instant startup (100x faster)
 - 🔄 **Batch Search**: Search multiple queries at once with auto-deduplication
 - 🌍 **Accent Normalization**: Automatic handling of accented characters (café ↔ cafe)
+- ⚖️ **Field Weighting**: Multi-field search with weighted scoring (title > description)
 - 🎯 **Typo Tolerant**: Handles missing letters, extra letters, transpositions, keyboard neighbors
 - 🔤 **N-gram Matching**: Fast partial substring matching
 - 📊 **Configurable Scoring**: Customizable thresholds and edit distances
@@ -1311,6 +1312,75 @@ getSuggestions(index2, 'naïve'); // ✅ Finds 'naive'
 - Multi-language search
 - User-friendly input (users can't always type accents)
 - E-commerce with international products
+
+### 11. Field Weighting 
+
+Multi-field search with weighted scoring for better ranking:
+
+```typescript
+import { buildFuzzyIndex, getSuggestions } from 'fuzzyfindjs';
+
+// Product search example
+const products = [
+  { id: 1, title: 'Apple iPhone', description: 'Smartphone with great camera', category: 'Electronics' },
+  { id: 2, title: 'Apple Pie Recipe', description: 'Delicious dessert', category: 'Food' },
+  { id: 3, title: 'Samsung Phone', description: 'Apple-like design', category: 'Electronics' }
+];
+
+const index = buildFuzzyIndex(products, {
+  fields: ['title', 'description', 'category'],
+  fieldWeights: {
+    title: 2.0,        // Title matches worth 2x
+    description: 1.0,  // Description matches normal weight
+    category: 1.5      // Category matches worth 1.5x
+  }
+});
+
+// Search for "apple"
+const results = getSuggestions(index, 'apple');
+// Result order (by weighted score):
+// 1. Apple iPhone (title match - 2x weight)
+// 2. Apple Pie Recipe (title match - 2x weight)
+// 3. Samsung Phone (description match - 1x weight)
+
+// Access field data in results
+console.log(results[0].fields);
+// → { title: 'Apple iPhone', description: 'Smartphone...', category: 'Electronics' }
+```
+
+**Use Cases:**
+- 📱 **E-commerce**: Product name > description > tags
+- 📄 **Documents**: Title > content > metadata
+- 👤 **User Search**: Name > email > bio
+- 🎵 **Music**: Song title > artist > album
+- 🏢 **Companies**: Company name > industry > description
+
+**Features:**
+- ✅ **Weighted Scoring** - Boost important fields
+- ✅ **Multi-Field Search** - Search across object properties
+- ✅ **Field Preservation** - Results include all field data
+- ✅ **Backwards Compatible** - String arrays still work
+- ✅ **Automatic Defaults** - Unspecified fields default to 1.0
+
+**Example: Document Search**
+```typescript
+const docs = [
+  { title: 'TypeScript Guide', content: 'Learn TypeScript basics', tags: 'programming' },
+  { title: 'JavaScript Intro', content: 'TypeScript is a superset', tags: 'tutorial' }
+];
+
+const index = buildFuzzyIndex(docs, {
+  fields: ['title', 'content', 'tags'],
+  fieldWeights: {
+    title: 3.0,    // Title most important
+    content: 1.0,  // Content normal
+    tags: 2.0      // Tags important
+  }
+});
+
+const results = getSuggestions(index, 'typescript');
+// "TypeScript Guide" ranks first (title match with 3x weight)
+```
 
 ## 🧪 Algorithm Details
 
