@@ -20,7 +20,7 @@ function parseQuery(query) {
       }
     }
   }
-  remaining = remaining.replace(doubleQuoteRegex, " ");
+  remaining = remaining.replace(/"[^"]*"/g, " ");
   const singleQuoteRegex = /'([^']+)'/g;
   while ((match = singleQuoteRegex.exec(query)) !== null) {
     const phrase = match[1].trim();
@@ -31,7 +31,7 @@ function parseQuery(query) {
       }
     }
   }
-  remaining = remaining.replace(singleQuoteRegex, " ");
+  remaining = remaining.replace(/'[^']*'/g, " ");
   const terms = remaining.split(/\s+/).map((t) => t.trim()).filter((t) => t.length > 0);
   return {
     phrases,

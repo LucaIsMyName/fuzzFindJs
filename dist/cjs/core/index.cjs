@@ -405,12 +405,14 @@ function findFuzzyMatches(query, index2, matches, processor, config2) {
       if (distance <= maxDistance) {
         words.forEach((word) => {
           const existingMatch = matches.get(word);
-          if (!existingMatch || existingMatch.matchType !== "exact" && existingMatch.matchType !== "prefix" && (existingMatch.editDistance || Infinity) > distance) {
+          const normalizedWord = processor.normalize(word);
+          const actualDistance = useTranspositions ? levenshtein.calculateDamerauLevenshteinDistance(query, normalizedWord, maxDistance) : levenshtein.calculateLevenshteinDistance(query, normalizedWord, maxDistance);
+          if (!existingMatch || existingMatch.matchType !== "exact" && existingMatch.matchType !== "prefix" && (existingMatch.editDistance || Infinity) > actualDistance) {
             matches.set(word, {
               word,
               normalized: variant,
               matchType: "fuzzy",
-              editDistance: distance,
+              editDistance: actualDistance,
               language: processor.language
             });
           }
