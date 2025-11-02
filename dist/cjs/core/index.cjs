@@ -6,6 +6,7 @@ const levenshtein = require("../algorithms/levenshtein.cjs");
 const invertedIndex = require("./inverted-index.cjs");
 const highlighting = require("./highlighting.cjs");
 const cache = require("./cache.cjs");
+const accentNormalization = require("../utils/accent-normalization.cjs");
 function buildFuzzyIndex(words = [], options = {}) {
   const config$1 = config.mergeConfig(options.config);
   config.validateConfig(config$1);
@@ -60,6 +61,15 @@ function processWordWithProcessor(word, processor, index2, config2, featureSet) 
   addToVariantMap(index2.variantToBase, normalized, word);
   addToVariantMap(index2.variantToBase, word.toLowerCase(), word);
   addToVariantMap(index2.variantToBase, word, word);
+  const accentFreeWord = accentNormalization.removeAccents(word);
+  if (accentFreeWord !== word) {
+    addToVariantMap(index2.variantToBase, accentFreeWord, word);
+    addToVariantMap(index2.variantToBase, accentFreeWord.toLowerCase(), word);
+    const normalizedAccentFree = processor.normalize(accentFreeWord);
+    if (normalizedAccentFree !== accentFreeWord.toLowerCase()) {
+      addToVariantMap(index2.variantToBase, normalizedAccentFree, word);
+    }
+  }
   if (featureSet.has("partial-words")) {
     const variants = processor.getWordVariants(word);
     variants.forEach((variant) => {
@@ -104,6 +114,14 @@ function addToVariantMap(map, key, value) {
     map.set(key, /* @__PURE__ */ new Set());
   }
   map.get(key).add(value);
+}
+function batchSearch(index2, queries, maxResults, options = {}) {
+  const results = {};
+  const uniqueQueries = [...new Set(queries)];
+  for (const query of uniqueQueries) {
+    results[query] = getSuggestions(index2, query, maxResults, options);
+  }
+  return results;
 }
 function getSuggestions(index2, query, maxResults, options = {}) {
   const config2 = index2.config;
@@ -152,7 +170,8 @@ function findExactMatches(query, index2, matches, language) {
   const exactMatches = index2.variantToBase.get(query);
   if (exactMatches) {
     exactMatches.forEach((word) => {
-      if (!matches.has(word)) {
+      const existing = matches.get(word);
+      if (!existing || existing.matchType !== "exact") {
         matches.set(word, {
           word,
           normalized: query,
@@ -258,7 +277,7 @@ function findFuzzyMatches(query, index2, matches, processor, config2) {
       if (distance <= maxDistance) {
         words.forEach((word) => {
           const existingMatch = matches.get(word);
-          if (!existingMatch || (existingMatch.editDistance || Infinity) > distance) {
+          if (!existingMatch || existingMatch.matchType !== "exact" && existingMatch.matchType !== "prefix" && (existingMatch.editDistance || Infinity) > distance) {
             matches.set(word, {
               word,
               normalized: variant,
@@ -345,6 +364,7 @@ function getSuggestionsInverted(index2, query, limit, threshold, processors, opt
   const results = matches.map((match) => createSuggestionResult(match, query, threshold, options)).filter((result) => result !== null).sort((a, b) => b.score - a.score).slice(0, limit);
   return results;
 }
+exports.batchSearch = batchSearch;
 exports.buildFuzzyIndex = buildFuzzyIndex;
 exports.getSuggestions = getSuggestions;
 //# sourceMappingURL=index.cjs.map

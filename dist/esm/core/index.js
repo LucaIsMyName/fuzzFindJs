@@ -4,6 +4,7 @@ import { calculateLevenshteinDistance, calculateNgramSimilarity } from "../algor
 import { buildInvertedIndex, searchInvertedIndex } from "./inverted-index.js";
 import { calculateHighlights } from "./highlighting.js";
 import { SearchCache } from "./cache.js";
+import { removeAccents } from "../utils/accent-normalization.js";
 function buildFuzzyIndex(words = [], options = {}) {
   const config = mergeConfig(options.config);
   validateConfig(config);
@@ -58,6 +59,15 @@ function processWordWithProcessor(word, processor, index, config, featureSet) {
   addToVariantMap(index.variantToBase, normalized, word);
   addToVariantMap(index.variantToBase, word.toLowerCase(), word);
   addToVariantMap(index.variantToBase, word, word);
+  const accentFreeWord = removeAccents(word);
+  if (accentFreeWord !== word) {
+    addToVariantMap(index.variantToBase, accentFreeWord, word);
+    addToVariantMap(index.variantToBase, accentFreeWord.toLowerCase(), word);
+    const normalizedAccentFree = processor.normalize(accentFreeWord);
+    if (normalizedAccentFree !== accentFreeWord.toLowerCase()) {
+      addToVariantMap(index.variantToBase, normalizedAccentFree, word);
+    }
+  }
   if (featureSet.has("partial-words")) {
     const variants = processor.getWordVariants(word);
     variants.forEach((variant) => {
@@ -102,6 +112,14 @@ function addToVariantMap(map, key, value) {
     map.set(key, /* @__PURE__ */ new Set());
   }
   map.get(key).add(value);
+}
+function batchSearch(index, queries, maxResults, options = {}) {
+  const results = {};
+  const uniqueQueries = [...new Set(queries)];
+  for (const query of uniqueQueries) {
+    results[query] = getSuggestions(index, query, maxResults, options);
+  }
+  return results;
 }
 function getSuggestions(index, query, maxResults, options = {}) {
   const config = index.config;
@@ -150,7 +168,8 @@ function findExactMatches(query, index, matches, language) {
   const exactMatches = index.variantToBase.get(query);
   if (exactMatches) {
     exactMatches.forEach((word) => {
-      if (!matches.has(word)) {
+      const existing = matches.get(word);
+      if (!existing || existing.matchType !== "exact") {
         matches.set(word, {
           word,
           normalized: query,
@@ -256,7 +275,7 @@ function findFuzzyMatches(query, index, matches, processor, config) {
       if (distance <= maxDistance) {
         words.forEach((word) => {
           const existingMatch = matches.get(word);
-          if (!existingMatch || (existingMatch.editDistance || Infinity) > distance) {
+          if (!existingMatch || existingMatch.matchType !== "exact" && existingMatch.matchType !== "prefix" && (existingMatch.editDistance || Infinity) > distance) {
             matches.set(word, {
               word,
               normalized: variant,
@@ -344,6 +363,7 @@ function getSuggestionsInverted(index, query, limit, threshold, processors, opti
   return results;
 }
 export {
+  batchSearch,
   buildFuzzyIndex,
   getSuggestions
 };

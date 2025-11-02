@@ -4,6 +4,11 @@ import type { FuzzyIndex, SuggestionResult, BuildIndexOptions, SearchOptions } f
  */
 export declare function buildFuzzyIndex(words?: string[], options?: BuildIndexOptions): FuzzyIndex;
 /**
+ * Batch search multiple queries at once
+ * Deduplicates identical queries and returns results for all
+ */
+export declare function batchSearch(index: FuzzyIndex, queries: string[], maxResults?: number, options?: SearchOptions): Record<string, SuggestionResult[]>;
+/**
  * Get fuzzy search suggestions from an index
  * Auto-detects whether to use inverted index or classic hash-based approach
  */

@@ -10,9 +10,11 @@
  * const results = getSuggestions(index, 'krankenh', 5);
  * ```
  */
-export { buildFuzzyIndex, getSuggestions } from "./core/index.js";
+export { buildFuzzyIndex, getSuggestions, batchSearch } from "./core/index.js";
 export { calculateHighlights, formatHighlightedHTML } from "./core/highlighting.js";
 export { SearchCache, LRUCache } from "./core/cache.js";
+export { serializeIndex, deserializeIndex, saveIndexToLocalStorage, loadIndexFromLocalStorage, getSerializedSize } from "./core/serialization.js";
+export { removeAccents, hasAccents, normalizeForComparison, getAccentVariants } from "./utils/accent-normalization.js";
 export { DEFAULT_CONFIG, PERFORMANCE_CONFIGS, mergeConfig } from "./core/config.js";
 export type { FuzzyIndex, FuzzyConfig, SuggestionResult, SearchMatch, MatchType, FuzzyFeature, LanguageProcessor, BuildIndexOptions, SearchOptions, DebugInfo, SuggestionResultWithDebug } from "./core/types.js";
 export { LanguageRegistry, GermanProcessor, EnglishProcessor, SpanishProcessor, FrenchProcessor, BaseLanguageProcessor } from "./languages/index.js";

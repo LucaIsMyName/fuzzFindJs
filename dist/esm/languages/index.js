@@ -2,6 +2,7 @@ import { GermanProcessor } from "./german/GermanProcessor.js";
 import { EnglishProcessor } from "./english/EnglishProcessor.js";
 import { SpanishProcessor } from "./spanish/SpanishProcessor.js";
 import { FrenchProcessor } from "./french/FrenchProcessor.js";
+import { BaseLanguageProcessor } from "./base/LanguageProcessor.js";
 class LanguageRegistry {
   static processors = /* @__PURE__ */ new Map([
     ["german", new GermanProcessor()],
@@ -51,6 +52,7 @@ class LanguageRegistry {
   }
 }
 export {
+  BaseLanguageProcessor,
   EnglishProcessor,
   FrenchProcessor,
   GermanProcessor,

@@ -5,6 +5,7 @@ import { calculateLevenshteinDistance, calculateNgramSimilarity } from "../algor
 import { buildInvertedIndex, searchInvertedIndex } from "./inverted-index.js";
 import { calculateHighlights } from "./highlighting.js";
 import { SearchCache } from "./cache.js";
+import { removeAccents } from "../utils/accent-normalization.js";
 
 /**
  * Build a fuzzy search index from a dictionary of words
@@ -90,6 +91,18 @@ function processWordWithProcessor(word: string, processor: LanguageProcessor, in
   addToVariantMap(index.variantToBase, word.toLowerCase(), word);
   // Also add the original word as-is for exact matching
   addToVariantMap(index.variantToBase, word, word);
+  
+  // Add accent-insensitive variants
+  const accentFreeWord = removeAccents(word);
+  if (accentFreeWord !== word) {
+    // Add the accent-free version in multiple forms
+    addToVariantMap(index.variantToBase, accentFreeWord, word); // Original case
+    addToVariantMap(index.variantToBase, accentFreeWord.toLowerCase(), word); // Lowercase
+    const normalizedAccentFree = processor.normalize(accentFreeWord);
+    if (normalizedAccentFree !== accentFreeWord.toLowerCase()) {
+      addToVariantMap(index.variantToBase, normalizedAccentFree, word); // Processor normalized
+    }
+  }
 
   // Generate and index variants
   if (featureSet.has("partial-words")) {
@@ -253,7 +266,9 @@ function findExactMatches(query: string, index: FuzzyIndex, matches: Map<string,
   const exactMatches = index.variantToBase.get(query);
   if (exactMatches) {
     exactMatches.forEach((word) => {
-      if (!matches.has(word)) {
+      // Always add exact matches, even if already found with lower score
+      const existing = matches.get(word);
+      if (!existing || existing.matchType !== "exact") {
         matches.set(word, {
           word,
           normalized: query,
@@ -387,7 +402,8 @@ function findFuzzyMatches(query: string, index: FuzzyIndex, matches: Map<string,
       if (distance <= maxDistance) {
         words.forEach((word) => {
           const existingMatch = matches.get(word);
-          if (!existingMatch || (existingMatch.editDistance || Infinity) > distance) {
+          // Don't replace exact or prefix matches with fuzzy matches
+          if (!existingMatch || (existingMatch.matchType !== "exact" && existingMatch.matchType !== "prefix" && (existingMatch.editDistance || Infinity) > distance)) {
             matches.set(word, {
               word,
               normalized: variant,

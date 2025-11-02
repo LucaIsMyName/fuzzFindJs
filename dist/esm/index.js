@@ -1,6 +1,9 @@
 import { buildFuzzyIndex, getSuggestions } from "./core/index.js";
+import { batchSearch } from "./core/index.js";
 import { calculateHighlights, formatHighlightedHTML } from "./core/highlighting.js";
 import { LRUCache, SearchCache } from "./core/cache.js";
+import { deserializeIndex, getSerializedSize, loadIndexFromLocalStorage, saveIndexToLocalStorage, serializeIndex } from "./core/serialization.js";
+import { getAccentVariants, hasAccents, normalizeForComparison, removeAccents } from "./utils/accent-normalization.js";
 import { DEFAULT_CONFIG, PERFORMANCE_CONFIGS, mergeConfig } from "./core/config.js";
 import { LanguageRegistry } from "./languages/index.js";
 import { areStringsSimilar, calculateDamerauLevenshteinDistance, calculateLevenshteinDistance, calculateNgramSimilarity, distanceToSimilarity } from "./algorithms/levenshtein.js";
@@ -36,15 +39,25 @@ export {
   SpanishProcessor,
   VERSION,
   areStringsSimilar,
+  batchSearch,
   buildFuzzyIndex,
   calculateDamerauLevenshteinDistance,
   calculateHighlights,
   calculateLevenshteinDistance,
   calculateNgramSimilarity,
   createFuzzySearch,
+  deserializeIndex,
   distanceToSimilarity,
   formatHighlightedHTML,
+  getAccentVariants,
+  getSerializedSize,
   getSuggestions,
-  mergeConfig
+  hasAccents,
+  loadIndexFromLocalStorage,
+  mergeConfig,
+  normalizeForComparison,
+  removeAccents,
+  saveIndexToLocalStorage,
+  serializeIndex
 };
 //# sourceMappingURL=index.js.map

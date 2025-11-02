@@ -4,6 +4,7 @@ const GermanProcessor = require("./german/GermanProcessor.cjs");
 const EnglishProcessor = require("./english/EnglishProcessor.cjs");
 const SpanishProcessor = require("./spanish/SpanishProcessor.cjs");
 const FrenchProcessor = require("./french/FrenchProcessor.cjs");
+const LanguageProcessor = require("./base/LanguageProcessor.cjs");
 class LanguageRegistry {
   static processors = /* @__PURE__ */ new Map([
     ["german", new GermanProcessor.GermanProcessor()],
@@ -56,5 +57,6 @@ exports.GermanProcessor = GermanProcessor.GermanProcessor;
 exports.EnglishProcessor = EnglishProcessor.EnglishProcessor;
 exports.SpanishProcessor = SpanishProcessor.SpanishProcessor;
 exports.FrenchProcessor = FrenchProcessor.FrenchProcessor;
+exports.BaseLanguageProcessor = LanguageProcessor.BaseLanguageProcessor;
 exports.LanguageRegistry = LanguageRegistry;
 //# sourceMappingURL=index.cjs.map

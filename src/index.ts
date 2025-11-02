@@ -24,6 +24,9 @@ export { SearchCache, LRUCache } from "./core/cache.js";
 // Serialization utilities (save/load indices)
 export { serializeIndex, deserializeIndex, saveIndexToLocalStorage, loadIndexFromLocalStorage, getSerializedSize } from "./core/serialization.js";
 
+// Accent normalization utilities
+export { removeAccents, hasAccents, normalizeForComparison, getAccentVariants } from "./utils/accent-normalization.js";
+
 // Configuration
 export { DEFAULT_CONFIG, PERFORMANCE_CONFIGS, mergeConfig } from "./core/config.js";
 
