@@ -1315,23 +1315,31 @@ getSuggestions(index2, 'naïve'); // ✅ Finds 'naive'
 - User-friendly input (users can't always type accents)
 - E-commerce with international products
 
-### 11. Field Weighting 
+### 11. Field Weighting (Opt-In)
+
+**⚠️ This is an opt-in feature** - By default, FuzzyFindJS works with simple string arrays. Field weighting is only activated when you explicitly provide the `fields` option.
 
 Multi-field search with weighted scoring for better ranking:
 
 ```typescript
 import { buildFuzzyIndex, getSuggestions } from 'fuzzyfindjs';
 
-// Product search example
+// ✅ DEFAULT: Simple string array (no field weighting)
+const simpleIndex = buildFuzzyIndex(['Apple iPhone', 'Samsung Phone', 'Google Pixel']);
+const results1 = getSuggestions(simpleIndex, 'phone');
+// Works normally with fuzzy matching
+
+// ✅ OPT-IN: Multi-field search with objects
 const products = [
   { id: 1, title: 'Apple iPhone', description: 'Smartphone with great camera', category: 'Electronics' },
   { id: 2, title: 'Apple Pie Recipe', description: 'Delicious dessert', category: 'Food' },
   { id: 3, title: 'Samsung Phone', description: 'Apple-like design', category: 'Electronics' }
 ];
 
+// You MUST specify fields when indexing objects
 const index = buildFuzzyIndex(products, {
-  fields: ['title', 'description', 'category'],
-  fieldWeights: {
+  fields: ['title', 'description', 'category'],  // Required for objects
+  fieldWeights: {                                 // Optional: customize weights
     title: 2.0,        // Title matches worth 2x
     description: 1.0,  // Description matches normal weight
     category: 1.5      // Category matches worth 1.5x
@@ -1350,6 +1358,12 @@ console.log(results[0].fields);
 // → { title: 'Apple iPhone', description: 'Smartphone...', category: 'Electronics' }
 ```
 
+**Important Notes:**
+- 🔴 **Required**: When indexing objects, you **must** specify `fields` option
+- ✅ **Optional**: `fieldWeights` are optional (defaults to 1.0 for all fields)
+- ✅ **Backwards Compatible**: String arrays work exactly as before
+- ⚡ **No Performance Impact**: Only activated when using objects with fields
+
 **Use Cases:**
 - 📱 **E-commerce**: Product name > description > tags
 - 📄 **Documents**: Title > content > metadata
@@ -1361,7 +1375,7 @@ console.log(results[0].fields);
 - ✅ **Weighted Scoring** - Boost important fields
 - ✅ **Multi-Field Search** - Search across object properties
 - ✅ **Field Preservation** - Results include all field data
-- ✅ **Backwards Compatible** - String arrays still work
+- ✅ **Opt-In Only** - Doesn't affect simple string arrays
 - ✅ **Automatic Defaults** - Unspecified fields default to 1.0
 
 **Example: Document Search**
@@ -1372,8 +1386,8 @@ const docs = [
 ];
 
 const index = buildFuzzyIndex(docs, {
-  fields: ['title', 'content', 'tags'],
-  fieldWeights: {
+  fields: ['title', 'content', 'tags'],  // Required!
+  fieldWeights: {                         // Optional
     title: 3.0,    // Title most important
     content: 1.0,  // Content normal
     tags: 2.0      // Tags important

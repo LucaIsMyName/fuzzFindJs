@@ -34,7 +34,7 @@ export const PERFORMANCE_CONFIGS: Record<string, Partial<FuzzyConfig>> = {
     performance: "balanced",
     features: ["phonetic", "partial-words", "missing-letters", "keyboard-neighbors"],
     maxEditDistance: 2,
-    fuzzyThreshold: 0.8,
+    fuzzyThreshold: 0.75,
     maxResults: 5,
   },
   comprehensive: {
