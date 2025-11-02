@@ -159,6 +159,15 @@ export interface SearchOptions {
     debug?: boolean;
     /** Include match highlights for UI rendering */
     includeHighlights?: boolean;
+    /** Enable FQL (Fuzzy Query Language) support */
+    enableFQL?: boolean;
+    /** FQL-specific options */
+    fqlOptions?: {
+        /** Allow regex patterns (can be slow) */
+        allowRegex?: boolean;
+        /** Timeout for query execution in ms */
+        timeout?: number;
+    };
 }
 export interface DebugInfo {
     /** Query processing steps */

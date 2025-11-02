@@ -43,6 +43,7 @@ import { matchesWord, matchesWildcard } from "../utils/word-boundaries.js";
 import { parseQuery } from "../utils/phrase-parser.js";
 import { matchPhrase } from "./phrase-matching.js";
 import { detectLanguages, sampleTextForDetection } from "../utils/language-detection.js";
+import { isFQLQuery, executeFQLQuery } from "../fql/index.js";
 
 /**
  * Build a fuzzy search index from a dictionary of words or objects
@@ -376,6 +377,11 @@ export function getSuggestions(index: FuzzyIndex, query: string, maxResults?: nu
 
   if (!query || query.trim().length < config.minQueryLength) {
     return [];
+  }
+
+  // FQL: Check if FQL is enabled and query is FQL
+  if (options.enableFQL && isFQLQuery(query)) {
+    return executeFQLQuery(index, query, limit, options);
   }
 
   // PHRASE SEARCH: Check if query contains phrases

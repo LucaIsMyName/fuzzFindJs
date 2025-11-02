@@ -11,6 +11,7 @@ import { matchesWildcard, matchesWord } from "../utils/word-boundaries.js";
 import { parseQuery } from "../utils/phrase-parser.js";
 import { matchPhrase } from "./phrase-matching.js";
 import { sampleTextForDetection, detectLanguages } from "../utils/language-detection.js";
+import { isFQLQuery, executeFQLQuery } from "../fql/index.js";
 function buildFuzzyIndex(words = [], options = {}) {
   const userSpecifiedLanguages = options.config?.languages;
   const shouldAutoDetect = !userSpecifiedLanguages || userSpecifiedLanguages.includes("auto");
@@ -230,6 +231,9 @@ function getSuggestions(index, query, maxResults, options = {}) {
   const threshold = options.fuzzyThreshold || config.fuzzyThreshold;
   if (!query || query.trim().length < config.minQueryLength) {
     return [];
+  }
+  if (options.enableFQL && isFQLQuery(query)) {
+    return executeFQLQuery(index, query, limit, options);
   }
   const parsedQuery = parseQuery(query);
   if (parsedQuery.hasPhrases) {

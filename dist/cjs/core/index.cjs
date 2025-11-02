@@ -13,6 +13,7 @@ const wordBoundaries = require("../utils/word-boundaries.cjs");
 const phraseParser = require("../utils/phrase-parser.cjs");
 const phraseMatching = require("./phrase-matching.cjs");
 const languageDetection = require("../utils/language-detection.cjs");
+const index$1 = require("../fql/index.cjs");
 function buildFuzzyIndex(words = [], options = {}) {
   const userSpecifiedLanguages = options.config?.languages;
   const shouldAutoDetect = !userSpecifiedLanguages || userSpecifiedLanguages.includes("auto");
@@ -33,7 +34,7 @@ function buildFuzzyIndex(words = [], options = {}) {
   if (isObjectArray && !hasFields) {
     throw new Error("When indexing objects, you must specify which fields to index via options.fields");
   }
-  const index$1 = {
+  const index$12 = {
     base: [],
     variantToBase: /* @__PURE__ */ new Map(),
     phoneticToBase: /* @__PURE__ */ new Map(),
@@ -43,12 +44,12 @@ function buildFuzzyIndex(words = [], options = {}) {
     config: config$1
   };
   if (hasFields) {
-    index$1.fields = options.fields;
-    index$1.fieldWeights = fieldWeighting.normalizeFieldWeights(options.fields, options.fieldWeights);
-    index$1.fieldData = /* @__PURE__ */ new Map();
+    index$12.fields = options.fields;
+    index$12.fieldWeights = fieldWeighting.normalizeFieldWeights(options.fields, options.fieldWeights);
+    index$12.fieldData = /* @__PURE__ */ new Map();
   }
   languageProcessors.forEach((processor) => {
-    index$1.languageProcessors.set(processor.language, processor);
+    index$12.languageProcessors.set(processor.language, processor);
   });
   const processedWords = /* @__PURE__ */ new Set();
   let processed = 0;
@@ -58,16 +59,16 @@ function buildFuzzyIndex(words = [], options = {}) {
       const fieldValues = fieldWeighting.extractFieldValues(item, options.fields);
       if (!fieldValues) continue;
       const baseId = Object.values(fieldValues)[0] || `item_${processed}`;
-      index$1.fieldData.set(baseId, fieldValues);
+      index$12.fieldData.set(baseId, fieldValues);
       for (const [fieldName, fieldValue] of Object.entries(fieldValues)) {
         if (!fieldValue || fieldValue.trim().length < config$1.minQueryLength) continue;
         const trimmedValue = fieldValue.trim();
         if (!processedWords.has(baseId.toLowerCase())) {
           processedWords.add(baseId.toLowerCase());
-          index$1.base.push(baseId);
+          index$12.base.push(baseId);
         }
         for (const processor of languageProcessors) {
-          processWordWithProcessorAndField(trimmedValue, baseId, fieldName, processor, index$1, config$1, featureSet);
+          processWordWithProcessorAndField(trimmedValue, baseId, fieldName, processor, index$12, config$1, featureSet);
         }
       }
     } else {
@@ -76,9 +77,9 @@ function buildFuzzyIndex(words = [], options = {}) {
       const trimmedWord = word.trim();
       if (processedWords.has(trimmedWord.toLowerCase())) continue;
       processedWords.add(trimmedWord.toLowerCase());
-      index$1.base.push(trimmedWord);
+      index$12.base.push(trimmedWord);
       for (const processor of languageProcessors) {
-        processWordWithProcessor(trimmedWord, processor, index$1, config$1, featureSet);
+        processWordWithProcessor(trimmedWord, processor, index$12, config$1, featureSet);
       }
     }
     processed++;
@@ -89,15 +90,15 @@ function buildFuzzyIndex(words = [], options = {}) {
   const shouldUseInvertedIndex = options.useInvertedIndex || config$1.useInvertedIndex || words.length >= 1e4;
   if (shouldUseInvertedIndex) {
     const { invertedIndex: invertedIndex$1, documents } = invertedIndex.buildInvertedIndex(words, languageProcessors, config$1, featureSet);
-    index$1.invertedIndex = invertedIndex$1;
-    index$1.documents = documents;
+    index$12.invertedIndex = invertedIndex$1;
+    index$12.documents = documents;
   }
   const enableCache = config$1.enableCache !== false;
   if (enableCache) {
     const cacheSize = config$1.cacheSize || 100;
-    index$1._cache = new cache.SearchCache(cacheSize);
+    index$12._cache = new cache.SearchCache(cacheSize);
   }
-  return index$1;
+  return index$12;
 }
 function processWordWithProcessor(word, processor, index2, config2, featureSet) {
   const normalized = processor.normalize(word);
@@ -232,6 +233,9 @@ function getSuggestions(index2, query, maxResults, options = {}) {
   const threshold = options.fuzzyThreshold || config2.fuzzyThreshold;
   if (!query || query.trim().length < config2.minQueryLength) {
     return [];
+  }
+  if (options.enableFQL && index$1.isFQLQuery(query)) {
+    return index$1.executeFQLQuery(index2, query, limit, options);
   }
   const parsedQuery = phraseParser.parseQuery(query);
   if (parsedQuery.hasPhrases) {
