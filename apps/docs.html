@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FuzzyFindJS - Documentation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Sidebar styling */
+        .sidebar {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        /* Content styling */
+        .content {
+            max-width: 800px;
+        }
+
+        .content h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: #111827;
+        }
+
+        .content h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            color: #111827;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+        }
+
+        .content h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-top: 2rem;
+            margin-bottom: 0.75rem;
+            color: #1f2937;
+        }
+
+        .content h4 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+
+        .content h5 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: #4b5563;
+        }
+
+        .content h6 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: #6b7280;
+        }
+
+        .content p {
+            margin-bottom: 1rem;
+            line-height: 1.75;
+            color: #374151;
+        }
+
+        .content ul, .content ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+            color: #374151;
+        }
+
+        .content li {
+            margin-bottom: 0.5rem;
+        }
+
+        .content pre {
+            background-color: #1f2937;
+            color: #f3f4f6;
+            padding: 1rem;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        .content code {
+            background-color: #f3f4f6;
+            color: #1f2937;
+            padding: 0.125rem 0.25rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+        }
+
+        .content pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        .content a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        .content a:hover {
+            text-decoration: underline;
+        }
+
+        .content blockquote {
+            border-left: 4px solid #e5e7eb;
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: #6b7280;
+            font-style: italic;
+        }
+
+        .content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+
+        .content th, .content td {
+            border: 1px solid #e5e7eb;
+            padding: 0.5rem;
+            text-align: left;
+        }
+
+        .content th {
+            background-color: #f9fafb;
+            font-weight: 600;
+        }
+
+        /* Sidebar navigation */
+        .nav-link {
+            display: block;
+            padding: 0.5rem 1rem;
+            color: #6b7280;
+            text-decoration: none;
+            transition: all 0.2s;
+            border-left: 2px solid transparent;
+        }
+
+        .nav-link:hover {
+            color: #111827;
+            background-color: #f9fafb;
+        }
+
+        .nav-link.active {
+            color: #2563eb;
+            border-left-color: #2563eb;
+            background-color: #eff6ff;
+        }
+
+        .nav-h2 {
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .nav-h3 {
+            font-size: 0.8125rem;
+            padding-left: 1.5rem;
+        }
+
+        .nav-h4 {
+            font-size: 0.75rem;
+            padding-left: 2rem;
+            color: #9ca3af;
+        }
+
+        .nav-h5, .nav-h6 {
+            font-size: 0.75rem;
+            padding-left: 2.5rem;
+            color: #9ca3af;
+        }
+
+        /* Mobile menu */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -100%;
+                top: 0;
+                width: 80%;
+                max-width: 300px;
+                background: white;
+                z-index: 50;
+                transition: left 0.3s;
+                border-right: 1px solid #e5e7eb;
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .mobile-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 40;
+            }
+
+            .mobile-overlay.open {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body class="bg-white">
+    <!-- Mobile Menu Button -->
+    <button id="mobile-menu-btn" class="md:hidden fixed top-4 left-4 z-50 bg-gray-900 text-white p-2 border border-gray-700">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+    </button>
+
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="mobile-overlay"></div>
+
+    <div class="flex">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar w-64 bg-white border-r border-gray-200 p-6">
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-900 mb-2">FuzzyFindJS</h2>
+                <p class="text-sm text-gray-600">Documentation</p>
+            </div>
+            <nav id="nav-menu" class="space-y-1">
+                <!-- Navigation will be generated here -->
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-8 md:p-12">
+            <div class="content" id="content">
+                <div class="text-center py-12">
+                    <div class="inline-block animate-spin h-8 w-8 border-4 border-gray-900 border-t-transparent mb-4"></div>
+                    <p class="text-gray-600">Loading documentation...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Mobile menu toggle
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const sidebar = document.getElementById('sidebar');
+        const mobileOverlay = document.getElementById('mobile-overlay');
+
+        mobileMenuBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            mobileOverlay.classList.toggle('open');
+        });
+
+        mobileOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            mobileOverlay.classList.remove('open');
+        });
+
+        // Fetch and render README
+        async function loadDocumentation() {
+            try {
+                const response = await fetch('../README.md');
+                const markdown = await response.text();
+                
+                // Parse markdown to HTML
+                const html = marked.parse(markdown);
+                
+                // Render content
+                document.getElementById('content').innerHTML = html;
+                
+                // Generate navigation
+                generateNavigation();
+                
+                // Setup scroll spy
+                setupScrollSpy();
+                
+                // Handle anchor links
+                setupAnchorLinks();
+                
+            } catch (error) {
+                document.getElementById('content').innerHTML = `
+                    <div class="bg-red-50 border border-red-200 p-6">
+                        <h3 class="text-red-900 font-bold mb-2">Error Loading Documentation</h3>
+                        <p class="text-red-700">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function generateNavigation() {
+            const content = document.getElementById('content');
+            const navMenu = document.getElementById('nav-menu');
+            
+            // Find all headings (h2-h6)
+            const headings = content.querySelectorAll('h2, h3, h4, h5, h6');
+            
+            let navHTML = '';
+            headings.forEach((heading, index) => {
+                const level = heading.tagName.toLowerCase();
+                const text = heading.textContent;
+                const id = `section-${index}`;
+                
+                // Add ID to heading for anchor links
+                heading.id = id;
+                
+                // Create nav link
+                navHTML += `
+                    <a href="#${id}" class="nav-link nav-${level}" data-target="${id}">
+                        ${text}
+                    </a>
+                `;
+            });
+            
+            navMenu.innerHTML = navHTML;
+        }
+
+        function setupScrollSpy() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const headings = document.querySelectorAll('[id^="section-"]');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        // Remove active class from all links
+                        navLinks.forEach(link => link.classList.remove('active'));
+                        
+                        // Add active class to current link
+                        const activeLink = document.querySelector(`[data-target="${entry.target.id}"]`);
+                        if (activeLink) {
+                            activeLink.classList.add('active');
+                        }
+                    }
+                });
+            }, {
+                rootMargin: '-20% 0px -80% 0px'
+            });
+            
+            headings.forEach(heading => observer.observe(heading));
+        }
+
+        function setupAnchorLinks() {
+            // Close mobile menu when clicking nav links
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    sidebar.classList.remove('open');
+                    mobileOverlay.classList.remove('open');
+                });
+            });
+        }
+
+        // Load documentation on page load
+        loadDocumentation();
+    </script>
+</body>
+</html>

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FuzzyFindJS - Test Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .test-pass {
+      color: #10b981;
+    }
+
+    .test-fail {
+      color: #ef4444;
+    }
+
+    .test-skip {
+      color: #6b7280;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="bg-white border-b border-gray-200 mb-8 -mx-4 px-4 py-6">
+      <div class="max-w-7xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">FuzzyFindJS Test Dashboard</h1>
+        <p class="text-gray-600">Automated test results and coverage</p>
+      </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div id="stats" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white border border-gray-200 p-6">
+        <div class="text-sm font-medium text-gray-600 mb-1">Total Tests</div>
+        <div class="text-3xl font-bold text-gray-900" id="total-tests">-</div>
+      </div>
+      <div class="bg-white border border-gray-200 p-6">
+        <div class="text-sm font-medium text-gray-600 mb-1">Passed</div>
+        <div class="text-3xl font-bold text-green-600" id="passed-tests">-</div>
+      </div>
+      <div class="bg-white border border-gray-200 p-6">
+        <div class="text-sm font-medium text-gray-600 mb-1">Failed</div>
+        <div class="text-3xl font-bold text-red-600" id="failed-tests">-</div>
+      </div>
+      <div class="bg-white border border-gray-200 p-6">
+        <div class="text-sm font-medium text-gray-600 mb-1">Duration</div>
+        <div class="text-3xl font-bold text-gray-900" id="duration">-</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="flex gap-4 mb-6">
+      <button id="run-tests" class="bg-blue-600 text-white px-6 py-2 font-medium hover:bg-blue-700 transition-colors">
+        Run Tests
+      </button>
+      <button id="export-results"
+        class="bg-gray-900 text-white px-6 py-2 font-medium hover:bg-gray-800 transition-colors">
+        Export Results
+      </button>
+      <button id="clear-results"
+        class="border border-gray-300 text-gray-700 px-6 py-2 font-medium hover:bg-gray-50 transition-colors">
+        Clear
+      </button>
+    </div>
+
+    <!-- Test Results -->
+    <div id="test-results" class="space-y-4">
+      <div class="bg-white border border-gray-200 p-8 text-center text-gray-500">
+        Click "Run Tests" to start the test suite
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading" class="hidden bg-white border border-gray-200 p-8 text-center">
+      <div class="inline-block animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
+      <p class="mt-4 text-gray-600">Running tests...</p>
+    </div>
+  </div>
+
+  <script type="module">
+    let testResults = null;
+
+    // Run tests by executing npm test and parsing output
+    document.getElementById('run-tests').addEventListener('click', async () => {
+      const resultsContainer = document.getElementById('test-results');
+      const loading = document.getElementById('loading');
+
+      resultsContainer.classList.add('hidden');
+      loading.classList.remove('hidden');
+
+      try {
+        // Note: We need to run tests via a backend or pre-generated results
+        // For now, we'll load pre-generated test results
+        const response = await fetch('../test-results.json');
+
+        if (!response.ok) {
+          throw new Error('Test results not found. Please run: npm test -- --run --reporter=json > test-results.json');
+        }
+
+        const data = await response.json();
+        testResults = await parseVitestResults(data);
+
+        // Update stats
+        document.getElementById('total-tests').textContent = testResults.summary.total;
+        document.getElementById('passed-tests').textContent = testResults.summary.passed;
+        document.getElementById('failed-tests').textContent = testResults.summary.failed;
+        document.getElementById('duration').textContent = `${(testResults.summary.duration / 1000).toFixed(2)}s`;
+
+        // Render results
+        renderResults();
+
+      } catch (error) {
+        resultsContainer.innerHTML = `
+          <div class="bg-red-50 border border-red-200 p-6">
+              <h3 class="text-red-900 font-bold mb-2">Error Loading Test Results</h3>
+              <p class="text-red-700 mb-4">${error.message}</p>
+              <div class="bg-white border border-red-300 p-4 text-sm">
+                  <p class="font-bold mb-2">To generate test results:</p>
+                  <pre class="bg-gray-900 text-white p-2 overflow-x-auto">npm test -- --run --reporter=json > test-results.json</pre>
+                  <p class="mt-2 text-gray-600">Then refresh this page.</p>
+              </div>
+          </div>
+                `;
+      } finally {
+        loading.classList.add('hidden');
+        resultsContainer.classList.remove('hidden');
+      }
+    });
+
+    async function parseVitestResults(vitestData) {
+      const results = {
+        timestamp: new Date().toISOString(),
+        suites: [],
+        summary: {
+          total: 0,
+          passed: 0,
+          failed: 0,
+          skipped: 0,
+          duration: 0
+        }
+      };
+
+      // Parse Vitest JSON output
+      const testFiles = vitestData.testResults || vitestData;
+      if (Array.isArray(testFiles)) {
+        for (const file of testFiles) {
+          const suite = {
+            name: file.name.replace(/^.*\/__tests__\//, '').replace(/\.test\.(ts|js)$/, ''),
+            tests: [],
+            passed: 0,
+            failed: 0,
+            file: file.name
+          };
+
+          // Try to fetch the source code
+          let sourceCode = null;
+          try {
+            const sourcePath = file.name.replace(/^.*\/src\//, '../src/');
+            const response = await fetch(sourcePath);
+            if (response.ok) {
+              sourceCode = await response.text();
+            }
+          } catch (e) {
+            console.warn('Could not fetch source code for', file.name);
+          }
+
+          file.assertionResults.forEach(test => {
+            // Build full test name from ancestor titles
+            const fullName = test.ancestorTitles && test.ancestorTitles.length > 0
+              ? [...test.ancestorTitles, test.title].join(' > ')
+              : test.title;
+            
+            const testResult = {
+              name: fullName,
+              status: test.status,
+              error: test.failureMessages && test.failureMessages.length > 0 ? test.failureMessages.join('\n') : null,
+              duration: (test.duration / 1000).toFixed(3),
+              code: sourceCode ? extractTestCode(sourceCode, test.title) : null
+            };
+
+            suite.tests.push(testResult);
+
+            if (test.status === 'passed') {
+              suite.passed++;
+              results.summary.passed++;
+            } else if (test.status === 'failed') {
+              suite.failed++;
+              results.summary.failed++;
+            } else {
+              results.summary.skipped++;
+            }
+
+            results.summary.total++;
+          });
+
+          results.summary.duration += file.duration || 0;
+          results.suites.push(suite);
+        }
+      }
+
+      return results;
+    }
+
+    function extractTestCode(sourceCode, testTitle) {
+      // Extract the last part of the test title (the actual it() description)
+      const testName = testTitle.split(' > ').pop();
+
+      // Try to find the test block
+      const itPattern = new RegExp(`it\\(['"\`]${escapeRegex(testName)}['"\`].*?\\{`, 's');
+      const match = sourceCode.match(itPattern);
+
+      if (!match) return null;
+
+      const startIndex = match.index;
+      let braceCount = 1;
+      let endIndex = startIndex + match[0].length;
+
+      // Find the matching closing brace
+      for (let i = endIndex; i < sourceCode.length; i++) {
+        if (sourceCode[i] === '{') braceCount++;
+        if (sourceCode[i] === '}') {
+          braceCount--;
+          if (braceCount === 0) {
+            endIndex = i + 1;
+            break;
+          }
+        }
+      }
+
+      const code = sourceCode.substring(startIndex, endIndex);
+
+      // Clean up indentation
+      const lines = code.split('\n');
+      const minIndent = Math.min(...lines.filter(l => l.trim()).map(l => l.match(/^\s*/)[0].length));
+      return lines.map(l => l.substring(minIndent)).join('\n').trim();
+    }
+
+    function escapeRegex(str) {
+      return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function renderResults() {
+      const container = document.getElementById('test-results');
+
+      let html = '';
+      for (const suite of testResults.suites) {
+        const passRate = suite.tests.length > 0
+          ? ((suite.passed / suite.tests.length) * 100).toFixed(0)
+          : 0;
+
+        html += `
+          <div class="bg-white border border-gray-200 mb-4">
+              <div class="border-b border-gray-200 p-6">
+                  <div class="flex items-center justify-between mb-2">
+                      <h3 class="text-xl font-bold text-gray-900">${suite.name}</h3>
+                      <div class="text-sm text-gray-600">
+                          ${suite.passed}/${suite.tests.length} passed (${passRate}%)
+                      </div>
+                  </div>
+                  ${suite.file ? `<div class="text-xs text-gray-500 font-mono">${suite.file}</div>` : ''}
+              </div>
+              <div class="divide-y divide-gray-200">
+                `;
+
+        for (const test of suite.tests) {
+          const statusColor = test.status === 'passed' ? 'text-green-600' : 'text-red-600';
+          const statusIcon = test.status === 'passed' ? '✓' : '✗';
+          const statusBg = test.status === 'passed' ? 'bg-green-50' : 'bg-red-50';
+
+          // Parse test name to extract describe blocks and test name
+          const testParts = test.name.split(' > ');
+          const testTitle = testParts[testParts.length - 1];
+          const describePath = testParts.slice(0, -1);
+
+          html += `
+                        <div class="p-4 hover:bg-gray-50">
+                            <div class="flex items-start gap-3">
+                                <span class="${statusColor} text-xl font-bold flex-shrink-0">${statusIcon}</span>
+                                <div class="flex-1 min-w-0">
+                                    ${describePath.length > 0 ? `
+                                        <div class="text-xs text-gray-500 mb-1">
+                                            ${describePath.map((part, idx) => `
+                                                <span class="inline-block">${escapeHtml(part)}</span>
+                                                ${idx < describePath.length - 1 ? '<span class="mx-1">›</span>' : ''}
+                                            `).join('')}
+                                        </div>
+                                    ` : ''}
+                                    <div class="font-medium text-gray-900">${escapeHtml(testTitle)}</div>
+                                    
+                                    ${test.code ? `
+                                        <details class="mt-2">
+                                            <summary class="text-xs text-blue-600 cursor-pointer hover:text-blue-800">
+                                                View test code
+                                            </summary>
+                                            <pre class="mt-2 p-3 bg-gray-900 text-gray-100 text-xs overflow-x-auto border border-gray-700">${escapeHtml(test.code)}</pre>
+                                        </details>
+                                    ` : ''}
+                                    
+                                    ${test.error ? `
+                                        <div class="mt-2 p-3 ${statusBg} border border-red-200">
+                                            <div class="text-xs font-bold text-red-900 mb-1">Error:</div>
+                                            <pre class="text-xs text-red-700 whitespace-pre-wrap overflow-x-auto">${escapeHtml(test.error)}</pre>
+                                        </div>
+                                    ` : ''}
+                                    
+                                    <div class="mt-2 text-xs ${test.status === 'passed' ? 'text-gray-600' : 'text-red-600'}">
+                                        <span class="inline-flex items-center gap-1">
+                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                            </svg>
+                                            ${test.duration}s
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+        }
+
+        html += `
+                        </div>
+                    </div>
+                `;
+      }
+
+      container.innerHTML = html;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Export results
+    document.getElementById('export-results').addEventListener('click', () => {
+      if (!testResults) {
+        alert('No test results to export. Run tests first.');
+        return;
+      }
+
+      const blob = new Blob([JSON.stringify(testResults, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fuzzyfindjs-test-results-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Clear results
+    document.getElementById('clear-results').addEventListener('click', () => {
+      testResults = null;
+      document.getElementById('test-results').innerHTML = `
+                <div class="bg-white border border-gray-200 p-8 text-center text-gray-500">
+                    Click "Run Tests" to start the test suite
+                </div>
+            `;
+      document.getElementById('total-tests').textContent = '-';
+      document.getElementById('passed-tests').textContent = '-';
+      document.getElementById('failed-tests').textContent = '-';
+      document.getElementById('duration').textContent = '-';
+    });
+  </script>
+</body>
+
+</html>

@@ -34,6 +34,8 @@
     "build:umd": "vite build --config vite.config.umd.ts",
     "verify": "node scripts/verify-build.js",
     "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:json": "vitest --run --reporter=json > test-results.json",
     "test:coverage": "vitest --coverage",
     "preview": "vite preview",
     "prepublishOnly": "npm run build"
