@@ -208,7 +208,13 @@ function extractFromJSON(jsonString: string): string {
 /**
  * Chunk text into smaller pieces
  */
-function chunkText(text: string, chunkSize: number, overlap: number, splitOn: "word" | "sentence" | "paragraph"): string[] {
+function chunkText(
+  //
+  text: string,
+  chunkSize: number,
+  overlap: number,
+  splitOn: "word" | "sentence" | "paragraph"
+): string[] {
   const chunks: string[] = [];
 
   if (splitOn === "paragraph") {
@@ -271,7 +277,11 @@ function chunkText(text: string, chunkSize: number, overlap: number, splitOn: "w
  * @param options - Configuration options
  * @returns Promise<string[]> Array of unique words
  */
-export async function dataToIndexAsync(content: string, options: DataToIndexOptions = {}): Promise<string[]> {
+export async function dataToIndexAsync(
+  //
+  content: string,
+  options: DataToIndexOptions = {}
+): Promise<string[]> {
   const { format = "string" } = options;
 
   if (format === "url") {

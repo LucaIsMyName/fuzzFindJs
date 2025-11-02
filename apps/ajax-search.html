@@ -313,18 +313,47 @@
       displayProducts(products);
     }
 
-    // Highlight matches in text
-    function highlightMatches(text, matchType) {
-      if (!matchType) return text;
+    // Highlight only the matched term in text
+    function highlightMatches(text, matchedTerm, matchType) {
+      if (!matchType || !matchedTerm) return text;
       
-      const words = text.split(/\s+/);
-      return words.map(word => {
-        return `<span class="highlight-${matchType}">${word}</span>`;
-      }).join(' ');
+      // For fuzzy matches, find the closest matching word in the text
+      if (matchType === 'fuzzy' || matchType === 'phonetic') {
+        const words = text.split(/\b/);
+        const normalizedQuery = matchedTerm.toLowerCase();
+        
+        // Find the word that best matches the query
+        let bestMatch = null;
+        let bestScore = 0;
+        
+        words.forEach(word => {
+          const normalizedWord = word.toLowerCase();
+          // Simple similarity check
+          if (normalizedWord.includes(normalizedQuery) || normalizedQuery.includes(normalizedWord)) {
+            const score = Math.max(normalizedWord.length, normalizedQuery.length);
+            if (score > bestScore) {
+              bestScore = score;
+              bestMatch = word;
+            }
+          }
+        });
+        
+        // If we found a match, highlight it
+        if (bestMatch) {
+          const escapedMatch = bestMatch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`\\b(${escapedMatch})\\b`, 'gi');
+          return text.replace(regex, `<span class="highlight-${matchType}">$1</span>`);
+        }
+      }
+      
+      // For exact/prefix matches, highlight the exact query term
+      const escapedTerm = matchedTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(${escapedTerm})`, 'gi');
+      return text.replace(regex, `<span class="highlight-${matchType}">$1</span>`);
     }
 
     // Display products
-    function displayProducts(productsToShow, results = null) {
+    function displayProducts(productsToShow, results = null, query = '') {
       if (productsToShow.length === 0) {
         productsContainer.classList.add('hidden');
         emptyState.classList.remove('hidden');
@@ -338,13 +367,18 @@
       const matchMap = new Map();
       if (results) {
         results.forEach(result => {
-          matchMap.set(result.display, result._debug_matchType || 'exact');
+          matchMap.set(result.display, {
+            matchType: result._debug_matchType || 'exact'
+          });
         });
       }
       
       productsContainer.innerHTML = productsToShow.map(product => {
-        const matchType = matchMap.get(product.name);
-        const nameHtml = matchType ? highlightMatches(product.name, matchType) : product.name;
+        const matchInfo = matchMap.get(product.name);
+        // Use the search query as the matched term, not the normalized full name
+        const nameHtml = matchInfo && query
+          ? highlightMatches(product.name, query, matchInfo.matchType) 
+          : product.name;
         
         return `
           <div class="product-card bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:border-blue-300">
@@ -423,8 +457,8 @@
         return products.find(p => p.name === result.display);
       }).filter(Boolean);
       
-      // Update UI
-      displayProducts(matchedProducts, results);
+      // Update UI - pass the query for highlighting
+      displayProducts(matchedProducts, results, query);
       resultCount.textContent = matchedProducts.length;
       searchTime.textContent = `(${searchDuration.toFixed(2)}ms)`;
       searchTimeMs.textContent = `${searchDuration.toFixed(2)}ms`;

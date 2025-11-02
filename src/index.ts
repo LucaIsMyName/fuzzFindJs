@@ -37,6 +37,14 @@ export { isWordBoundary, matchesAtWordBoundary, findWordBoundaryMatches, matches
 export { dataToIndex, dataToIndexAsync } from "./utils/data-indexer.js";
 export type { DataToIndexOptions } from "./utils/data-indexer.js";
 
+// Phrase parsing utilities
+export { parseQuery, hasPhraseSyntax, normalizePhrase, splitPhraseWords } from "./utils/phrase-parser.js";
+export type { ParsedQuery } from "./utils/phrase-parser.js";
+
+// Language detection utilities
+export { detectLanguages, detectLanguagesWithConfidence, sampleTextForDetection, isValidLanguage, normalizeLanguageCode } from "./utils/language-detection.js";
+export type { LanguageDetectionResult } from "./utils/language-detection.js";
+
 // Configuration
 export { DEFAULT_CONFIG, PERFORMANCE_CONFIGS, mergeConfig } from "./core/config.js";
 
@@ -53,11 +61,15 @@ export type { BM25Config, DocumentStats, CorpusStats } from "./algorithms/bm25.j
 export { BloomFilter, createBloomFilter } from "./algorithms/bloom-filter.js";
 export type { BloomFilterConfig } from "./algorithms/bloom-filter.js";
 
+// Memory pooling utilities (for performance optimization)
+export { ObjectPool, ArrayPool, MapPool, SetPool, withPooledArray, globalArrayPool, globalMapPool, globalSetPool } from "./utils/memory-pool.js";
+
 /**
  * Quick start function with sensible defaults
  * Perfect for getting started quickly
  */
 export function createFuzzySearch(
+  //
   dictionary: string[],
   options: {
     languages?: string[];
@@ -82,4 +94,4 @@ export function createFuzzySearch(
 /**
  * Version information
  */
-export const VERSION = "1.0.2";
+export const VERSION = "1.0.13";

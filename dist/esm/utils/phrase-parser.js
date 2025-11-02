@@ -40,7 +40,20 @@ function parseQuery(query) {
     hasPhrases: phrases.length > 0
   };
 }
+function hasPhraseSyntax(query) {
+  if (!query) return false;
+  return /"[^"]*"/.test(query) || /'[^']*'/.test(query);
+}
+function normalizePhrase(phrase) {
+  return phrase.toLowerCase().trim().replace(/\s+/g, " ");
+}
+function splitPhraseWords(phrase) {
+  return phrase.toLowerCase().trim().split(/\s+/).filter((w) => w.length > 0);
+}
 export {
-  parseQuery
+  hasPhraseSyntax,
+  normalizePhrase,
+  parseQuery,
+  splitPhraseWords
 };
 //# sourceMappingURL=phrase-parser.js.map

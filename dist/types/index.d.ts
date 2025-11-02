@@ -19,6 +19,10 @@ export { filterStopWords, getStopWordsForLanguages, isStopWord, DEFAULT_STOP_WOR
 export { isWordBoundary, matchesAtWordBoundary, findWordBoundaryMatches, matchesWord, matchesWildcard } from "./utils/word-boundaries.js";
 export { dataToIndex, dataToIndexAsync } from "./utils/data-indexer.js";
 export type { DataToIndexOptions } from "./utils/data-indexer.js";
+export { parseQuery, hasPhraseSyntax, normalizePhrase, splitPhraseWords } from "./utils/phrase-parser.js";
+export type { ParsedQuery } from "./utils/phrase-parser.js";
+export { detectLanguages, detectLanguagesWithConfidence, sampleTextForDetection, isValidLanguage, normalizeLanguageCode } from "./utils/language-detection.js";
+export type { LanguageDetectionResult } from "./utils/language-detection.js";
 export { DEFAULT_CONFIG, PERFORMANCE_CONFIGS, mergeConfig } from "./core/config.js";
 export type { FuzzyIndex, FuzzyConfig, SuggestionResult, SearchMatch, MatchType, FuzzyFeature, LanguageProcessor, BuildIndexOptions, SearchOptions, DebugInfo, SuggestionResultWithDebug } from "./core/types.js";
 export { LanguageRegistry, GermanProcessor, EnglishProcessor, SpanishProcessor, FrenchProcessor, BaseLanguageProcessor } from "./languages/index.js";
@@ -27,6 +31,7 @@ export { calculateBM25Score, calculateIDF, normalizeBM25Score, combineScores, bu
 export type { BM25Config, DocumentStats, CorpusStats } from "./algorithms/bm25.js";
 export { BloomFilter, createBloomFilter } from "./algorithms/bloom-filter.js";
 export type { BloomFilterConfig } from "./algorithms/bloom-filter.js";
+export { ObjectPool, ArrayPool, MapPool, SetPool, withPooledArray, globalArrayPool, globalMapPool, globalSetPool } from "./utils/memory-pool.js";
 /**
  * Quick start function with sensible defaults
  * Perfect for getting started quickly
@@ -42,5 +47,5 @@ export declare function createFuzzySearch(dictionary: string[], options?: {
 /**
  * Version information
  */
-export declare const VERSION = "1.0.2";
+export declare const VERSION = "1.0.13";
 //# sourceMappingURL=index.d.ts.map
