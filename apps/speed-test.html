@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FuzzyFindJS - Performance Speed Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../dist/umd/fuzzyfindjs.min.js"></script>
+  <style>
+    .metric-card {
+      transition: all 0.3s ease;
+    }
+    .metric-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .progress-bar {
+      transition: width 0.3s ease;
+    }
+    .result-good { color: #10b981; }
+    .result-warning { color: #f59e0b; }
+    .result-bad { color: #ef4444; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="container mx-auto px-4 py-8 max-w-7xl">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-4xl font-bold text-gray-900 mb-2">⚡ FuzzyFindJS Performance Test</h1>
+      <p class="text-gray-600">Benchmark fuzzy search performance with large datasets</p>
+    </div>
+
+    <!-- Controls -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Dataset Size -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">
+            Dataset Size: <span id="datasetSizeLabel" class="text-blue-600">10,000</span>
+          </label>
+          <input
+            type="range"
+            id="datasetSize"
+            min="1000"
+            max="100000"
+            step="1000"
+            value="10000"
+            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+          />
+          <div class="flex justify-between text-xs text-gray-500 mt-1">
+            <span>1K</span>
+            <span>100K</span>
+          </div>
+        </div>
+
+        <!-- Performance Mode -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">
+            Performance Mode
+          </label>
+          <select id="performanceMode" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="fast">Fast</option>
+            <option value="balanced" selected>Balanced</option>
+            <option value="comprehensive">Comprehensive</option>
+          </select>
+        </div>
+
+        <!-- Query Count -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">
+            Test Queries: <span id="queryCountLabel" class="text-blue-600">100</span>
+          </label>
+          <input
+            type="range"
+            id="queryCount"
+            min="10"
+            max="1000"
+            step="10"
+            value="100"
+            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+          />
+        </div>
+
+        <!-- Run Button -->
+        <div class="flex items-end">
+          <button
+            id="runTest"
+            class="w-full px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            🚀 Run Test
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div id="progressContainer" class="mt-4 hidden">
+        <div class="flex justify-between text-sm text-gray-600 mb-1">
+          <span id="progressText">Preparing...</span>
+          <span id="progressPercent">0%</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div id="progressBar" class="progress-bar bg-blue-600 h-2 rounded-full" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <!-- Index Build Time -->
+      <div class="metric-card bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="text-sm text-gray-600 mb-1">Index Build Time</div>
+        <div id="buildTime" class="text-3xl font-bold text-gray-900">-</div>
+        <div class="text-xs text-gray-500 mt-1">Time to build search index</div>
+      </div>
+
+      <!-- Average Query Time -->
+      <div class="metric-card bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="text-sm text-gray-600 mb-1">Avg Query Time</div>
+        <div id="avgQueryTime" class="text-3xl font-bold text-gray-900">-</div>
+        <div class="text-xs text-gray-500 mt-1">Average search time</div>
+      </div>
+
+      <!-- Queries Per Second -->
+      <div class="metric-card bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="text-sm text-gray-600 mb-1">Queries/Second</div>
+        <div id="queriesPerSec" class="text-3xl font-bold text-gray-900">-</div>
+        <div class="text-xs text-gray-500 mt-1">Throughput</div>
+      </div>
+
+      <!-- Memory Usage -->
+      <div class="metric-card bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="text-sm text-gray-600 mb-1">Index Size</div>
+        <div id="indexSize" class="text-3xl font-bold text-gray-900">-</div>
+        <div class="text-xs text-gray-500 mt-1">Estimated memory</div>
+      </div>
+    </div>
+
+    <!-- Detailed Results -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Query Performance Breakdown -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Query Performance Breakdown</h3>
+        <div class="space-y-3">
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-gray-600">Fastest Query</span>
+              <span id="fastestQuery" class="font-semibold text-green-600">-</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div id="fastestBar" class="bg-green-500 h-2 rounded-full" style="width: 0%"></div>
+            </div>
+          </div>
+          
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-gray-600">Median Query</span>
+              <span id="medianQuery" class="font-semibold text-blue-600">-</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div id="medianBar" class="bg-blue-500 h-2 rounded-full" style="width: 0%"></div>
+            </div>
+          </div>
+          
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-gray-600">Slowest Query</span>
+              <span id="slowestQuery" class="font-semibold text-red-600">-</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div id="slowestBar" class="bg-red-500 h-2 rounded-full" style="width: 100%"></div>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-gray-200">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-600">95th Percentile</span>
+              <span id="p95Query" class="font-semibold text-gray-900">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Test Configuration -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Test Configuration</h3>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-600">Dataset Size:</span>
+            <span id="configDatasetSize" class="font-semibold text-gray-900">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Performance Mode:</span>
+            <span id="configMode" class="font-semibold text-gray-900">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Test Queries:</span>
+            <span id="configQueries" class="font-semibold text-gray-900">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Features Enabled:</span>
+            <span id="configFeatures" class="font-semibold text-gray-900">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Inverted Index:</span>
+            <span id="configInverted" class="font-semibold text-gray-900">-</span>
+          </div>
+          <div class="flex justify-between pt-2 border-t border-gray-200">
+            <span class="text-gray-600">Total Test Time:</span>
+            <span id="totalTime" class="font-semibold text-gray-900">-</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sample Queries Log -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">Sample Query Results</h3>
+        <span id="sampleCount" class="text-sm text-gray-500">Showing first 10</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th class="px-4 py-2 text-left text-gray-600 font-semibold">Query</th>
+              <th class="px-4 py-2 text-left text-gray-600 font-semibold">Time</th>
+              <th class="px-4 py-2 text-left text-gray-600 font-semibold">Results</th>
+              <th class="px-4 py-2 text-left text-gray-600 font-semibold">Top Match</th>
+              <th class="px-4 py-2 text-left text-gray-600 font-semibold">Score</th>
+            </tr>
+          </thead>
+          <tbody id="sampleResults" class="divide-y divide-gray-200">
+            <tr>
+              <td colspan="5" class="px-4 py-8 text-center text-gray-400">
+                Run a test to see results
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Performance Tips -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-6">
+      <h3 class="text-lg font-semibold text-blue-900 mb-3">💡 Performance Tips</h3>
+      <ul class="space-y-2 text-sm text-blue-800">
+        <li>• <strong>Fast mode:</strong> Best for real-time autocomplete (1-2ms queries)</li>
+        <li>• <strong>Balanced mode:</strong> Good mix of speed and accuracy (2-5ms queries)</li>
+        <li>• <strong>Comprehensive mode:</strong> Maximum accuracy, slower (5-20ms queries)</li>
+        <li>• <strong>Inverted index:</strong> Auto-enabled for 10K+ words, 10-100x faster for large datasets</li>
+        <li>• <strong>Caching:</strong> Repeated queries are 10-100x faster with LRU cache</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // DOM Elements
+    const datasetSizeInput = document.getElementById('datasetSize');
+    const datasetSizeLabel = document.getElementById('datasetSizeLabel');
+    const performanceModeSelect = document.getElementById('performanceMode');
+    const queryCountInput = document.getElementById('queryCount');
+    const queryCountLabel = document.getElementById('queryCountLabel');
+    const runTestButton = document.getElementById('runTest');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const progressPercent = document.getElementById('progressPercent');
+
+    // State
+    let fuzzyIndex = null;
+    let testResults = null;
+
+    // Update labels
+    datasetSizeInput.addEventListener('input', (e) => {
+      datasetSizeLabel.textContent = parseInt(e.target.value).toLocaleString();
+    });
+
+    queryCountInput.addEventListener('input', (e) => {
+      queryCountLabel.textContent = parseInt(e.target.value).toLocaleString();
+    });
+
+    // Generate random word
+    function generateWord(length = 8) {
+      const chars = 'abcdefghijklmnopqrstuvwxyz';
+      let word = '';
+      for (let i = 0; i < length; i++) {
+        word += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return word;
+    }
+
+    // Generate dataset
+    function generateDataset(size) {
+      const words = [];
+      const prefixes = ['test', 'data', 'user', 'admin', 'system', 'app', 'web', 'api', 'service', 'client'];
+      const suffixes = ['handler', 'manager', 'service', 'controller', 'provider', 'factory', 'helper', 'util'];
+      
+      for (let i = 0; i < size; i++) {
+        if (i % 3 === 0) {
+          // Compound words
+          words.push(prefixes[i % prefixes.length] + suffixes[i % suffixes.length] + i);
+        } else if (i % 3 === 1) {
+          // Random words
+          words.push(generateWord(5 + (i % 10)));
+        } else {
+          // Mixed
+          words.push(prefixes[i % prefixes.length] + '_' + generateWord(5));
+        }
+      }
+      
+      return words;
+    }
+
+    // Generate test queries
+    function generateQueries(dataset, count) {
+      const queries = [];
+      const queryTypes = ['exact', 'prefix', 'fuzzy', 'partial'];
+      
+      for (let i = 0; i < count; i++) {
+        const randomWord = dataset[Math.floor(Math.random() * dataset.length)];
+        const queryType = queryTypes[i % queryTypes.length];
+        
+        switch (queryType) {
+          case 'exact':
+            queries.push(randomWord);
+            break;
+          case 'prefix':
+            queries.push(randomWord.substring(0, 3 + (i % 5)));
+            break;
+          case 'fuzzy':
+            // Introduce typo
+            const typoWord = randomWord.split('');
+            if (typoWord.length > 2) {
+              const pos = Math.floor(Math.random() * typoWord.length);
+              typoWord[pos] = generateWord(1);
+            }
+            queries.push(typoWord.join(''));
+            break;
+          case 'partial':
+            const start = Math.floor(Math.random() * (randomWord.length - 3));
+            queries.push(randomWord.substring(start, start + 4));
+            break;
+        }
+      }
+      
+      return queries;
+    }
+
+    // Update progress
+    function updateProgress(percent, text) {
+      progressBar.style.width = percent + '%';
+      progressPercent.textContent = Math.round(percent) + '%';
+      progressText.textContent = text;
+    }
+
+    // Format time
+    function formatTime(ms) {
+      if (ms < 1) return (ms * 1000).toFixed(2) + 'µs';
+      if (ms < 1000) return ms.toFixed(2) + 'ms';
+      return (ms / 1000).toFixed(2) + 's';
+    }
+
+    // Format size
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + 'B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + 'KB';
+      return (bytes / (1024 * 1024)).toFixed(2) + 'MB';
+    }
+
+    // Get performance class
+    function getPerformanceClass(ms, threshold1 = 1, threshold2 = 5) {
+      if (ms < threshold1) return 'result-good';
+      if (ms < threshold2) return 'result-warning';
+      return 'result-bad';
+    }
+
+    // Run performance test
+    async function runTest() {
+      runTestButton.disabled = true;
+      progressContainer.classList.remove('hidden');
+      
+      const datasetSize = parseInt(datasetSizeInput.value);
+      const performanceMode = performanceModeSelect.value;
+      const queryCount = parseInt(queryCountInput.value);
+      
+      try {
+        // Step 1: Generate dataset
+        updateProgress(10, 'Generating dataset...');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const dataset = generateDataset(datasetSize);
+        
+        // Step 2: Build index
+        updateProgress(30, 'Building search index...');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const buildStart = performance.now();
+        fuzzyIndex = FuzzyFindJS.buildFuzzyIndex(dataset, {
+          config: {
+            performance: performanceMode,
+            maxResults: 10
+          }
+        });
+        const buildTime = performance.now() - buildStart;
+        
+        // Step 3: Generate queries
+        updateProgress(50, 'Generating test queries...');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const queries = generateQueries(dataset, queryCount);
+        
+        // Step 4: Run queries
+        updateProgress(60, 'Running queries...');
+        const queryTimes = [];
+        const sampleResults = [];
+        
+        for (let i = 0; i < queries.length; i++) {
+          const queryStart = performance.now();
+          const results = FuzzyFindJS.getSuggestions(fuzzyIndex, queries[i], 10);
+          const queryTime = performance.now() - queryStart;
+          
+          queryTimes.push(queryTime);
+          
+          if (i < 10) {
+            sampleResults.push({
+              query: queries[i],
+              time: queryTime,
+              resultCount: results.length,
+              topMatch: results[0]?.display || '-',
+              topScore: results[0]?.score || 0
+            });
+          }
+          
+          if (i % 10 === 0) {
+            updateProgress(60 + (i / queries.length) * 30, `Running queries... ${i}/${queries.length}`);
+            await new Promise(resolve => setTimeout(resolve, 0));
+          }
+        }
+        
+        // Step 5: Calculate statistics
+        updateProgress(95, 'Calculating statistics...');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        queryTimes.sort((a, b) => a - b);
+        const avgQueryTime = queryTimes.reduce((a, b) => a + b, 0) / queryTimes.length;
+        const medianQueryTime = queryTimes[Math.floor(queryTimes.length / 2)];
+        const p95QueryTime = queryTimes[Math.floor(queryTimes.length * 0.95)];
+        const fastestQuery = queryTimes[0];
+        const slowestQuery = queryTimes[queryTimes.length - 1];
+        const queriesPerSec = 1000 / avgQueryTime;
+        
+        // Estimate index size
+        const indexSize = JSON.stringify(fuzzyIndex).length;
+        
+        const totalTime = buildTime + queryTimes.reduce((a, b) => a + b, 0);
+        
+        testResults = {
+          buildTime,
+          avgQueryTime,
+          medianQueryTime,
+          p95QueryTime,
+          fastestQuery,
+          slowestQuery,
+          queriesPerSec,
+          indexSize,
+          totalTime,
+          sampleResults,
+          config: {
+            datasetSize,
+            performanceMode,
+            queryCount,
+            features: fuzzyIndex.config.features.length,
+            invertedIndex: datasetSize >= 10000
+          }
+        };
+        
+        // Step 6: Display results
+        updateProgress(100, 'Complete!');
+        displayResults(testResults);
+        
+        setTimeout(() => {
+          progressContainer.classList.add('hidden');
+          runTestButton.disabled = false;
+        }, 1000);
+        
+      } catch (error) {
+        console.error('Test failed:', error);
+        alert('Test failed: ' + error.message);
+        progressContainer.classList.add('hidden');
+        runTestButton.disabled = false;
+      }
+    }
+
+    // Display results
+    function displayResults(results) {
+      // Main metrics
+      document.getElementById('buildTime').textContent = formatTime(results.buildTime);
+      document.getElementById('buildTime').className = 'text-3xl font-bold ' + getPerformanceClass(results.buildTime, 100, 500);
+      
+      document.getElementById('avgQueryTime').textContent = formatTime(results.avgQueryTime);
+      document.getElementById('avgQueryTime').className = 'text-3xl font-bold ' + getPerformanceClass(results.avgQueryTime);
+      
+      document.getElementById('queriesPerSec').textContent = Math.round(results.queriesPerSec).toLocaleString();
+      document.getElementById('queriesPerSec').className = 'text-3xl font-bold text-gray-900';
+      
+      document.getElementById('indexSize').textContent = formatSize(results.indexSize);
+      document.getElementById('indexSize').className = 'text-3xl font-bold text-gray-900';
+      
+      // Query breakdown
+      document.getElementById('fastestQuery').textContent = formatTime(results.fastestQuery);
+      document.getElementById('medianQuery').textContent = formatTime(results.medianQueryTime);
+      document.getElementById('slowestQuery').textContent = formatTime(results.slowestQuery);
+      document.getElementById('p95Query').textContent = formatTime(results.p95QueryTime);
+      
+      const maxTime = results.slowestQuery;
+      document.getElementById('fastestBar').style.width = (results.fastestQuery / maxTime * 100) + '%';
+      document.getElementById('medianBar').style.width = (results.medianQueryTime / maxTime * 100) + '%';
+      
+      // Configuration
+      document.getElementById('configDatasetSize').textContent = results.config.datasetSize.toLocaleString();
+      document.getElementById('configMode').textContent = results.config.performanceMode.charAt(0).toUpperCase() + results.config.performanceMode.slice(1);
+      document.getElementById('configQueries').textContent = results.config.queryCount.toLocaleString();
+      document.getElementById('configFeatures').textContent = results.config.features;
+      document.getElementById('configInverted').textContent = results.config.invertedIndex ? 'Yes ✓' : 'No';
+      document.getElementById('totalTime').textContent = formatTime(results.totalTime);
+      
+      // Sample results table
+      const tbody = document.getElementById('sampleResults');
+      tbody.innerHTML = results.sampleResults.map(r => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-2 font-mono text-xs">${r.query}</td>
+          <td class="px-4 py-2 ${getPerformanceClass(r.time)}">${formatTime(r.time)}</td>
+          <td class="px-4 py-2">${r.resultCount}</td>
+          <td class="px-4 py-2 font-mono text-xs">${r.topMatch}</td>
+          <td class="px-4 py-2">${(r.topScore * 100).toFixed(1)}%</td>
+        </tr>
+      `).join('');
+    }
+
+    // Event listeners
+    runTestButton.addEventListener('click', runTest);
+  </script>
+</body>
+</html>
