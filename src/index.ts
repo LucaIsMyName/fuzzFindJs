@@ -33,6 +33,10 @@ export { filterStopWords, getStopWordsForLanguages, isStopWord, DEFAULT_STOP_WOR
 // Word boundary utilities
 export { isWordBoundary, matchesAtWordBoundary, findWordBoundaryMatches, matchesWord, matchesWildcard } from "./utils/word-boundaries.js";
 
+// Data indexing utilities
+export { dataToIndex, dataToIndexAsync } from "./utils/data-indexer.js";
+export type { DataToIndexOptions } from "./utils/data-indexer.js";
+
 // Configuration
 export { DEFAULT_CONFIG, PERFORMANCE_CONFIGS, mergeConfig } from "./core/config.js";
 

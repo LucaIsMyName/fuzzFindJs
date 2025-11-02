@@ -6,6 +6,7 @@ import { deserializeIndex, getSerializedSize, loadIndexFromLocalStorage, saveInd
 import { getAccentVariants, hasAccents, normalizeForComparison, removeAccents } from "./utils/accent-normalization.js";
 import { DEFAULT_STOP_WORDS, filterStopWords, getStopWordsForLanguages, isStopWord } from "./utils/stop-words.js";
 import { findWordBoundaryMatches, isWordBoundary, matchesAtWordBoundary, matchesWildcard, matchesWord } from "./utils/word-boundaries.js";
+import { dataToIndex, dataToIndexAsync } from "./utils/data-indexer.js";
 import { DEFAULT_CONFIG, PERFORMANCE_CONFIGS, mergeConfig } from "./core/config.js";
 import { LanguageRegistry } from "./languages/index.js";
 import { areStringsSimilar, calculateDamerauLevenshteinDistance, calculateLevenshteinDistance, calculateNgramSimilarity, distanceToSimilarity } from "./algorithms/levenshtein.js";
@@ -49,6 +50,8 @@ export {
   calculateLevenshteinDistance,
   calculateNgramSimilarity,
   createFuzzySearch,
+  dataToIndex,
+  dataToIndexAsync,
   deserializeIndex,
   distanceToSimilarity,
   filterStopWords,
