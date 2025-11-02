@@ -9,6 +9,7 @@ vite.config*.ts
 vitest.config.ts
 
 # Demo files
+apps/
 index.html
 demo.js
 example.ts
