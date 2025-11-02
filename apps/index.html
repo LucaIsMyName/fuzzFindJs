@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FuzzyFindJS - Interactive Demo & Playground</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../dist/umd/fuzzyfindjs.min.js"></script>
+  <style>
+    /* Match type highlights */
+    .highlight-exact { background-color: #ef4444; color: white; padding: 1px 3px; border-radius: 2px; font-weight: 600; }
+    .highlight-fuzzy { background-color: #3b82f6; color: white; padding: 1px 3px; border-radius: 2px; }
+    .highlight-phonetic { background-color: #a78bfa; color: white; padding: 1px 3px; border-radius: 2px; }
+    .highlight-synonym { background-color: #facc15; color: black; padding: 1px 3px; border-radius: 2px; }
+    .highlight-prefix { background-color: #34d399; color: white; padding: 1px 3px; border-radius: 2px; }
+    .highlight-compound { background-color: #f97316; color: white; padding: 1px 3px; border-radius: 2px; }
+    .highlight-ngram { background-color: #8b5cf6; color: white; padding: 1px 3px; border-radius: 2px; }
+    
+    /* Custom scrollbar */
+    .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    
+    /* Debug panel */
+    .debug-panel {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    
+    /* Toggle switch */
+    .toggle-checkbox:checked {
+      background-color: #3b82f6;
+      border-color: #3b82f6;
+    }
+    .toggle-checkbox:checked + .toggle-label {
+      transform: translateX(1.25rem);
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="container mx-auto px-4 py-8 max-w-7xl">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-4xl font-bold text-gray-900 mb-2">🔍 FuzzyFindJS Interactive Playground</h1>
+      <p class="text-gray-600">Explore all features with live configuration and debug mode</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Main Content (Left - 2 columns) -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Search Bar -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div class="relative">
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="Try: krankenh, cafe, schule, müller..."
+              class="w-full px-4 py-3 pl-12 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition"
+              autocomplete="off"
+            />
+            <svg class="absolute left-4 top-4 w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+          
+          <!-- Search Stats -->
+          <div class="mt-4 flex items-center justify-between text-sm">
+            <div class="text-gray-600">
+              <span id="resultCount" class="font-semibold text-gray-900">0</span> results
+              <span id="searchTime" class="text-gray-500 ml-2"></span>
+            </div>
+            <div class="flex gap-2">
+              <button
+                id="debugToggle"
+                class="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm font-medium"
+              >
+                🐛 Debug Mode
+              </button>
+              <button
+                id="clearBtn"
+                class="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm font-medium"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Search Results</h3>
+          <div id="resultsContainer" class="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
+            <div class="text-gray-500 text-center py-8">Enter a search query to see results</div>
+          </div>
+        </div>
+
+        <!-- Debug Panel (Hidden by default) -->
+        <div id="debugPanel" class="hidden bg-gray-900 text-green-400 rounded-lg shadow-sm border border-gray-700 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold">🐛 Debug Information</h3>
+            <button id="closeDebug" class="text-gray-400 hover:text-white">✕</button>
+          </div>
+          <div class="debug-panel space-y-4">
+            <div>
+              <div class="text-gray-400 text-xs mb-1">INDEX STATS</div>
+              <pre id="indexStats" class="bg-gray-800 p-3 rounded overflow-x-auto text-xs"></pre>
+            </div>
+            <div>
+              <div class="text-gray-400 text-xs mb-1">LAST SEARCH DEBUG</div>
+              <pre id="searchDebug" class="bg-gray-800 p-3 rounded overflow-x-auto text-xs max-h-64 overflow-y-auto custom-scrollbar"></pre>
+            </div>
+            <div>
+              <div class="text-gray-400 text-xs mb-1">CACHE STATS</div>
+              <pre id="cacheStats" class="bg-gray-800 p-3 rounded overflow-x-auto text-xs"></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Index Management -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Index Management</h3>
+          <div class="space-y-3">
+            <div class="flex gap-2">
+              <input
+                type="text"
+                id="addItemInput"
+                placeholder="Add new word..."
+                class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+              />
+              <button
+                id="addItemBtn"
+                class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm font-medium"
+              >
+                ➕ Add
+              </button>
+            </div>
+            <div class="flex gap-2">
+              <input
+                type="text"
+                id="removeItemInput"
+                placeholder="Remove word..."
+                class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+              />
+              <button
+                id="removeItemBtn"
+                class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-medium"
+              >
+                🗑️ Remove
+              </button>
+            </div>
+            <button
+              id="rebuildBtn"
+              class="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium"
+            >
+              🔄 Rebuild Index
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Sidebar (Right - 1 column) -->
+      <div class="space-y-6">
+        <!-- Match Type Legend -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Match Types</h3>
+          <div class="space-y-2 text-sm">
+            <div class="flex items-center justify-between">
+              <span class="highlight-exact">Exact</span>
+              <span class="text-gray-600">100% match</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="highlight-prefix">Prefix</span>
+              <span class="text-gray-600">Starts with</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="highlight-fuzzy">Fuzzy</span>
+              <span class="text-gray-600">Typo-tolerant</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="highlight-phonetic">Phonetic</span>
+              <span class="text-gray-600">Sounds similar</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="highlight-synonym">Synonym</span>
+              <span class="text-gray-600">Similar meaning</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="highlight-compound">Compound</span>
+              <span class="text-gray-600">Word parts</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="highlight-ngram">N-gram</span>
+              <span class="text-gray-600">Partial match</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Performance Mode -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Performance Mode</h3>
+          <select id="performanceMode" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+            <option value="fast">Fast (Speed optimized)</option>
+            <option value="balanced" selected>Balanced (Recommended)</option>
+            <option value="comprehensive">Comprehensive (Quality)</option>
+          </select>
+        </div>
+
+        <!-- Languages -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Languages</h3>
+          <div class="space-y-2">
+            <label class="flex items-center">
+              <input type="checkbox" id="lang-english" class="mr-2" checked>
+              <span class="text-sm">English</span>
+            </label>
+            <label class="flex items-center">
+              <input type="checkbox" id="lang-german" class="mr-2" checked>
+              <span class="text-sm">German</span>
+            </label>
+            <label class="flex items-center">
+              <input type="checkbox" id="lang-french" class="mr-2">
+              <span class="text-sm">French</span>
+            </label>
+            <label class="flex items-center">
+              <input type="checkbox" id="lang-spanish" class="mr-2">
+              <span class="text-sm">Spanish</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Features -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Features</h3>
+          <div class="space-y-2 text-sm">
+            <label class="flex items-center justify-between">
+              <span>Phonetic Matching</span>
+              <input type="checkbox" id="feat-phonetic" class="toggle-checkbox" checked>
+            </label>
+            <label class="flex items-center justify-between">
+              <span>Compound Words</span>
+              <input type="checkbox" id="feat-compound" class="toggle-checkbox" checked>
+            </label>
+            <label class="flex items-center justify-between">
+              <span>Synonyms</span>
+              <input type="checkbox" id="feat-synonyms" class="toggle-checkbox" checked>
+            </label>
+            <label class="flex items-center justify-between">
+              <span>Partial Words</span>
+              <input type="checkbox" id="feat-partial" class="toggle-checkbox" checked>
+            </label>
+            <label class="flex items-center justify-between">
+              <span>Missing Letters</span>
+              <input type="checkbox" id="feat-missing" class="toggle-checkbox" checked>
+            </label>
+            <label class="flex items-center justify-between">
+              <span>Extra Letters</span>
+              <input type="checkbox" id="feat-extra" class="toggle-checkbox" checked>
+            </label>
+            <label class="flex items-center justify-between">
+              <span>Transpositions</span>
+              <input type="checkbox" id="feat-transpositions" class="toggle-checkbox" checked>
+            </label>
+          </div>
+        </div>
+
+        <!-- Advanced Settings -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Advanced Settings</h3>
+          <div class="space-y-4">
+            <!-- Max Results -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Max Results: <span id="maxResultsValue" class="text-blue-600">10</span>
+              </label>
+              <input
+                type="range"
+                id="maxResults"
+                min="1"
+                max="50"
+                value="10"
+                class="w-full"
+              />
+            </div>
+
+            <!-- Fuzzy Threshold -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Threshold: <span id="thresholdValue" class="text-blue-600">0.3</span>
+              </label>
+              <input
+                type="range"
+                id="threshold"
+                min="0"
+                max="1"
+                step="0.1"
+                value="0.3"
+                class="w-full"
+              />
+            </div>
+
+            <!-- Max Edit Distance -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Max Edit Distance: <span id="editDistanceValue" class="text-blue-600">2</span>
+              </label>
+              <input
+                type="range"
+                id="editDistance"
+                min="1"
+                max="5"
+                value="2"
+                class="w-full"
+              />
+            </div>
+
+            <!-- N-gram Size -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                N-gram Size: <span id="ngramValue" class="text-blue-600">3</span>
+              </label>
+              <input
+                type="range"
+                id="ngram"
+                min="2"
+                max="5"
+                value="3"
+                class="w-full"
+              />
+            </div>
+
+            <!-- Min Query Length -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Min Query Length: <span id="minQueryValue" class="text-blue-600">1</span>
+              </label>
+              <input
+                type="range"
+                id="minQuery"
+                min="1"
+                max="5"
+                value="1"
+                class="w-full"
+              />
+            </div>
+
+            <!-- Additional Options -->
+            <div class="space-y-2 pt-2 border-t">
+              <label class="flex items-center justify-between text-sm">
+                <span>Use BM25 Scoring</span>
+                <input type="checkbox" id="opt-bm25" class="toggle-checkbox">
+              </label>
+              <label class="flex items-center justify-between text-sm">
+                <span>Use Bloom Filter</span>
+                <input type="checkbox" id="opt-bloom" class="toggle-checkbox">
+              </label>
+              <label class="flex items-center justify-between text-sm">
+                <span>Enable Cache</span>
+                <input type="checkbox" id="opt-cache" class="toggle-checkbox" checked>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Sample dictionary
+    const defaultDictionary = [
+      'Krankenhaus', 'Schule', 'Kindergarten', 'Universität', 'Bibliothek',
+      'Café', 'Restaurant', 'Supermarkt', 'Apotheke', 'Bäckerei',
+      'Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber',
+      'Berlin', 'München', 'Hamburg', 'Köln', 'Frankfurt',
+      'JavaScript', 'TypeScript', 'Python', 'Java', 'C++',
+      'Apple', 'Banana', 'Cherry', 'Date', 'Elderberry',
+      'Phone', 'Fone', 'Telephone', 'Mobile', 'Smartphone',
+      'Computer', 'Laptop', 'Desktop', 'Tablet', 'Monitor'
+    ];
+
+    // State
+    let fuzzyIndex = null;
+    let currentDictionary = [...defaultDictionary];
+    let debugMode = false;
+
+    // DOM Elements
+    const searchInput = document.getElementById('searchInput');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const resultCount = document.getElementById('resultCount');
+    const searchTime = document.getElementById('searchTime');
+    const clearBtn = document.getElementById('clearBtn');
+    const debugToggle = document.getElementById('debugToggle');
+    const debugPanel = document.getElementById('debugPanel');
+    const closeDebug = document.getElementById('closeDebug');
+    const addItemInput = document.getElementById('addItemInput');
+    const addItemBtn = document.getElementById('addItemBtn');
+    const removeItemInput = document.getElementById('removeItemInput');
+    const removeItemBtn = document.getElementById('removeItemBtn');
+    const rebuildBtn = document.getElementById('rebuildBtn');
+
+    // Settings elements
+    const performanceMode = document.getElementById('performanceMode');
+    const maxResults = document.getElementById('maxResults');
+    const maxResultsValue = document.getElementById('maxResultsValue');
+    const threshold = document.getElementById('threshold');
+    const thresholdValue = document.getElementById('thresholdValue');
+    const editDistance = document.getElementById('editDistance');
+    const editDistanceValue = document.getElementById('editDistanceValue');
+    const ngram = document.getElementById('ngram');
+    const ngramValue = document.getElementById('ngramValue');
+    const minQuery = document.getElementById('minQuery');
+    const minQueryValue = document.getElementById('minQueryValue');
+
+    // Get current configuration
+    function getCurrentConfig() {
+      const languages = [];
+      if (document.getElementById('lang-english').checked) languages.push('english');
+      if (document.getElementById('lang-german').checked) languages.push('german');
+      if (document.getElementById('lang-french').checked) languages.push('french');
+      if (document.getElementById('lang-spanish').checked) languages.push('spanish');
+
+      const features = [];
+      if (document.getElementById('feat-phonetic').checked) features.push('phonetic');
+      if (document.getElementById('feat-compound').checked) features.push('compound');
+      if (document.getElementById('feat-synonyms').checked) features.push('synonyms');
+      if (document.getElementById('feat-partial').checked) features.push('partial-words');
+      if (document.getElementById('feat-missing').checked) features.push('missing-letters');
+      if (document.getElementById('feat-extra').checked) features.push('extra-letters');
+      if (document.getElementById('feat-transpositions').checked) features.push('transpositions');
+
+      return {
+        performance: performanceMode.value,
+        languages: languages.length > 0 ? languages : ['english'],
+        features,
+        maxResults: parseInt(maxResults.value),
+        fuzzyThreshold: parseFloat(threshold.value),
+        maxEditDistance: parseInt(editDistance.value),
+        ngramSize: parseInt(ngram.value),
+        minQueryLength: parseInt(minQuery.value),
+        useBM25: document.getElementById('opt-bm25').checked,
+        useBloomFilter: document.getElementById('opt-bloom').checked,
+        enableCache: document.getElementById('opt-cache').checked
+      };
+    }
+
+    // Build index
+    function buildIndex() {
+      const config = getCurrentConfig();
+      const start = performance.now();
+      
+      fuzzyIndex = FuzzyFindJS.buildFuzzyIndex(currentDictionary, {
+        config
+      });
+      
+      const buildTime = performance.now() - start;
+      console.log(`Index built in ${buildTime.toFixed(2)}ms`);
+      
+      updateDebugPanel();
+    }
+
+    // Update debug panel
+    function updateDebugPanel() {
+      if (!fuzzyIndex) return;
+
+      const indexStats = {
+        totalWords: fuzzyIndex.base.length,
+        languages: Array.from(fuzzyIndex.languageProcessors.keys()),
+        hasInvertedIndex: !!fuzzyIndex.invertedIndex,
+        hasBloomFilter: !!fuzzyIndex.invertedIndex?.bloomFilter,
+        hasCache: !!fuzzyIndex._cache,
+        variantMappings: fuzzyIndex.variantToBase.size,
+        phoneticMappings: fuzzyIndex.phoneticToBase.size,
+        ngramMappings: fuzzyIndex.ngramIndex.size,
+        synonymMappings: fuzzyIndex.synonymMap.size
+      };
+
+      document.getElementById('indexStats').textContent = JSON.stringify(indexStats, null, 2);
+
+      if (fuzzyIndex._cache) {
+        const cacheStats = fuzzyIndex._cache.getStats();
+        document.getElementById('cacheStats').textContent = JSON.stringify(cacheStats, null, 2);
+      }
+    }
+
+    // Perform search
+    function performSearch() {
+      const query = searchInput.value.trim();
+      
+      if (!query) {
+        resultsContainer.innerHTML = '<div class="text-gray-500 text-center py-8">Enter a search query to see results</div>';
+        resultCount.textContent = '0';
+        searchTime.textContent = '';
+        return;
+      }
+
+      const config = getCurrentConfig();
+      const start = performance.now();
+      
+      const results = FuzzyFindJS.getSuggestions(
+        fuzzyIndex,
+        query,
+        config.maxResults,
+        {
+          fuzzyThreshold: config.fuzzyThreshold,
+          returnDebugInfo: debugMode
+        }
+      );
+      
+      const duration = performance.now() - start;
+
+      // Update debug info
+      if (debugMode) {
+        document.getElementById('searchDebug').textContent = JSON.stringify(results, null, 2);
+      }
+
+      // Display results
+      displayResults(results, query);
+      resultCount.textContent = results.length;
+      searchTime.textContent = `(${duration.toFixed(2)}ms)`;
+    }
+
+    // Display results
+    function displayResults(results, query) {
+      if (results.length === 0) {
+        resultsContainer.innerHTML = '<div class="text-gray-500 text-center py-8">No results found</div>';
+        return;
+      }
+
+      resultsContainer.innerHTML = results.map(result => {
+        const matchType = result._debug_matchType || 'exact';
+        const score = (result.score * 100).toFixed(1);
+        
+        // Highlight matched term
+        let displayText = result.display;
+        try {
+          const regex = new RegExp(`(${query})`, 'gi');
+          displayText = result.display.replace(regex, `<span class="highlight-${matchType}">$1</span>`);
+        } catch (e) {
+          // If regex fails, just show plain text
+        }
+
+        return `
+          <div class="flex items-center justify-between p-3 bg-gray-50 rounded hover:bg-gray-100 transition">
+            <div class="flex-1">
+              <div class="font-medium text-gray-900">${displayText}</div>
+              ${result.isSynonym ? '<span class="text-xs text-purple-600">Synonym</span>' : ''}
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="highlight-${matchType} text-xs">${matchType}</span>
+              <span class="text-sm font-semibold text-gray-700">${score}%</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Event Listeners
+    searchInput.addEventListener('input', performSearch);
+    clearBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      performSearch();
+    });
+
+    debugToggle.addEventListener('click', () => {
+      debugMode = !debugMode;
+      debugPanel.classList.toggle('hidden');
+      debugToggle.textContent = debugMode ? '🐛 Debug: ON' : '🐛 Debug Mode';
+      debugToggle.classList.toggle('bg-purple-600');
+      debugToggle.classList.toggle('bg-purple-800');
+      updateDebugPanel();
+    });
+
+    closeDebug.addEventListener('click', () => {
+      debugMode = false;
+      debugPanel.classList.add('hidden');
+      debugToggle.textContent = '🐛 Debug Mode';
+      debugToggle.classList.remove('bg-purple-800');
+      debugToggle.classList.add('bg-purple-600');
+    });
+
+    // Index management
+    addItemBtn.addEventListener('click', () => {
+      const item = addItemInput.value.trim();
+      if (!item) return;
+
+      FuzzyFindJS.updateIndex(fuzzyIndex, [item]);
+      currentDictionary.push(item);
+      addItemInput.value = '';
+      updateDebugPanel();
+      console.log(`✅ Added: ${item}`);
+    });
+
+    removeItemBtn.addEventListener('click', () => {
+      const item = removeItemInput.value.trim();
+      if (!item) return;
+
+      FuzzyFindJS.removeFromIndex(fuzzyIndex, [item]);
+      currentDictionary = currentDictionary.filter(w => w.toLowerCase() !== item.toLowerCase());
+      removeItemInput.value = '';
+      updateDebugPanel();
+      console.log(`🗑️ Removed: ${item}`);
+    });
+
+    rebuildBtn.addEventListener('click', () => {
+      buildIndex();
+      console.log('🔄 Index rebuilt');
+    });
+
+    // Settings change listeners
+    performanceMode.addEventListener('change', buildIndex);
+    
+    document.querySelectorAll('[id^="lang-"]').forEach(checkbox => {
+      checkbox.addEventListener('change', buildIndex);
+    });
+
+    document.querySelectorAll('[id^="feat-"]').forEach(checkbox => {
+      checkbox.addEventListener('change', buildIndex);
+    });
+
+    document.querySelectorAll('[id^="opt-"]').forEach(checkbox => {
+      checkbox.addEventListener('change', buildIndex);
+    });
+
+    maxResults.addEventListener('input', (e) => {
+      maxResultsValue.textContent = e.target.value;
+      performSearch();
+    });
+
+    threshold.addEventListener('input', (e) => {
+      thresholdValue.textContent = parseFloat(e.target.value).toFixed(1);
+      performSearch();
+    });
+
+    editDistance.addEventListener('input', (e) => {
+      editDistanceValue.textContent = e.target.value;
+      buildIndex();
+    });
+
+    ngram.addEventListener('input', (e) => {
+      ngramValue.textContent = e.target.value;
+      buildIndex();
+    });
+
+    minQuery.addEventListener('input', (e) => {
+      minQueryValue.textContent = e.target.value;
+      buildIndex();
+    });
+
+    // Initialize
+    buildIndex();
+  </script>
+</body>
+</html>

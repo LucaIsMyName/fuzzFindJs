@@ -1,5 +1,5 @@
 import { buildFuzzyIndex, getSuggestions } from "./core/index.js";
-import { batchSearch } from "./core/index.js";
+import { batchSearch, removeFromIndex, updateIndex } from "./core/index.js";
 import { calculateHighlights, formatHighlightedHTML } from "./core/highlighting.js";
 import { LRUCache, SearchCache } from "./core/cache.js";
 import { deserializeIndex, getSerializedSize, loadIndexFromLocalStorage, saveIndexToLocalStorage, serializeIndex } from "./core/serialization.js";
@@ -23,7 +23,7 @@ import { BaseLanguageProcessor } from "./languages/base/LanguageProcessor.js";
 function createFuzzySearch(dictionary, options = {}) {
   const index = buildFuzzyIndex(dictionary, {
     config: {
-      languages: options.languages || ["german"],
+      languages: options.languages || ["english"],
       performance: options.performance || "balanced",
       maxResults: options.maxResults || 5
     }
@@ -98,10 +98,12 @@ export {
   normalizePhrase,
   parseQuery,
   removeAccents,
+  removeFromIndex,
   sampleTextForDetection,
   saveIndexToLocalStorage,
   serializeIndex,
   splitPhraseWords,
+  updateIndex,
   withPooledArray
 };
 //# sourceMappingURL=index.js.map

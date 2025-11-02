@@ -24,7 +24,7 @@ const LanguageProcessor = require("./languages/base/LanguageProcessor.cjs");
 function createFuzzySearch(dictionary, options = {}) {
   const index$12 = index.buildFuzzyIndex(dictionary, {
     config: {
-      languages: options.languages || ["german"],
+      languages: options.languages || ["english"],
       performance: options.performance || "balanced",
       maxResults: options.maxResults || 5
     }
@@ -38,6 +38,8 @@ const VERSION = "1.0.13";
 exports.batchSearch = index.batchSearch;
 exports.buildFuzzyIndex = index.buildFuzzyIndex;
 exports.getSuggestions = index.getSuggestions;
+exports.removeFromIndex = index.removeFromIndex;
+exports.updateIndex = index.updateIndex;
 exports.calculateHighlights = highlighting.calculateHighlights;
 exports.formatHighlightedHTML = highlighting.formatHighlightedHTML;
 exports.LRUCache = cache.LRUCache;

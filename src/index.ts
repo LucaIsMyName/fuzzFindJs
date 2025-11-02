@@ -12,57 +12,192 @@
  */
 
 // Core functionality
-export { buildFuzzyIndex, getSuggestions, batchSearch } from "./core/index.js";
-import { buildFuzzyIndex, getSuggestions } from "./core/index.js";
+export {
+  //
+  buildFuzzyIndex,
+  getSuggestions,
+  batchSearch,
+  updateIndex,
+  removeFromIndex,
+} from "./core/index.js";
+
+import {
+  //
+  buildFuzzyIndex,
+  getSuggestions,
+} from "./core/index.js";
 
 // Highlighting utilities (for UI rendering)
-export { calculateHighlights, formatHighlightedHTML } from "./core/highlighting.js";
+export {
+  //
+  calculateHighlights,
+  formatHighlightedHTML,
+} from "./core/highlighting.js";
 
 // Cache utilities (for advanced users)
-export { SearchCache, LRUCache } from "./core/cache.js";
+export {
+  //
+  SearchCache,
+  LRUCache,
+} from "./core/cache.js";
 
 // Serialization utilities (save/load indices)
-export { serializeIndex, deserializeIndex, saveIndexToLocalStorage, loadIndexFromLocalStorage, getSerializedSize } from "./core/serialization.js";
+export {
+  //
+  serializeIndex,
+  deserializeIndex,
+  saveIndexToLocalStorage,
+  loadIndexFromLocalStorage,
+  getSerializedSize,
+} from "./core/serialization.js";
 
 // Accent normalization utilities
-export { removeAccents, hasAccents, normalizeForComparison, getAccentVariants } from "./utils/accent-normalization.js";
+export {
+  //
+  removeAccents,
+  hasAccents,
+  normalizeForComparison,
+  getAccentVariants,
+} from "./utils/accent-normalization.js";
 
 // Stop words utilities
-export { filterStopWords, getStopWordsForLanguages, isStopWord, DEFAULT_STOP_WORDS } from "./utils/stop-words.js";
+export {
+  //
+  filterStopWords,
+  getStopWordsForLanguages,
+  isStopWord,
+  DEFAULT_STOP_WORDS,
+} from "./utils/stop-words.js";
 
 // Word boundary utilities
-export { isWordBoundary, matchesAtWordBoundary, findWordBoundaryMatches, matchesWord, matchesWildcard } from "./utils/word-boundaries.js";
+export {
+  //
+  isWordBoundary,
+  matchesAtWordBoundary,
+  findWordBoundaryMatches,
+  matchesWord,
+  matchesWildcard,
+} from "./utils/word-boundaries.js";
 
 // Data indexing utilities
-export { dataToIndex, dataToIndexAsync } from "./utils/data-indexer.js";
-export type { DataToIndexOptions } from "./utils/data-indexer.js";
+export {
+  //
+  dataToIndex,
+  dataToIndexAsync,
+} from "./utils/data-indexer.js";
+export type {
+  //
+  DataToIndexOptions,
+} from "./utils/data-indexer.js";
 
 // Phrase parsing utilities
-export { parseQuery, hasPhraseSyntax, normalizePhrase, splitPhraseWords } from "./utils/phrase-parser.js";
-export type { ParsedQuery } from "./utils/phrase-parser.js";
+export {
+  //
+  parseQuery,
+  hasPhraseSyntax,
+  normalizePhrase,
+  splitPhraseWords,
+} from "./utils/phrase-parser.js";
+export type {
+  //
+  ParsedQuery,
+} from "./utils/phrase-parser.js";
 
 // Language detection utilities
-export { detectLanguages, detectLanguagesWithConfidence, sampleTextForDetection, isValidLanguage, normalizeLanguageCode } from "./utils/language-detection.js";
-export type { LanguageDetectionResult } from "./utils/language-detection.js";
+export {
+  //
+  detectLanguages,
+  detectLanguagesWithConfidence,
+  sampleTextForDetection,
+  isValidLanguage,
+  normalizeLanguageCode,
+} from "./utils/language-detection.js";
+export type {
+  //
+  LanguageDetectionResult,
+} from "./utils/language-detection.js";
 
 // Configuration
-export { DEFAULT_CONFIG, PERFORMANCE_CONFIGS, mergeConfig } from "./core/config.js";
+export {
+  //
+  DEFAULT_CONFIG,
+  PERFORMANCE_CONFIGS,
+  mergeConfig,
+} from "./core/config.js";
 
 // Types
-export type { FuzzyIndex, FuzzyConfig, SuggestionResult, SearchMatch, MatchType, FuzzyFeature, LanguageProcessor, BuildIndexOptions, SearchOptions, DebugInfo, SuggestionResultWithDebug } from "./core/types.js";
+export type {
+  //
+  FuzzyIndex,
+  FuzzyConfig,
+  SuggestionResult,
+  SearchMatch,
+  MatchType,
+  FuzzyFeature,
+  LanguageProcessor,
+  BuildIndexOptions,
+  SearchOptions,
+  DebugInfo,
+  SuggestionResultWithDebug,
+} from "./core/types.js";
 
 // Language processors
-export { LanguageRegistry, GermanProcessor, EnglishProcessor, SpanishProcessor, FrenchProcessor, BaseLanguageProcessor } from "./languages/index.js";
+export {
+  //
+  LanguageRegistry,
+  GermanProcessor,
+  EnglishProcessor,
+  SpanishProcessor,
+  FrenchProcessor,
+  BaseLanguageProcessor,
+} from "./languages/index.js";
 
 // Algorithms (for advanced users)
-export { calculateLevenshteinDistance, calculateDamerauLevenshteinDistance, calculateNgramSimilarity, distanceToSimilarity, areStringsSimilar } from "./algorithms/levenshtein.js";
-export { calculateBM25Score, calculateIDF, normalizeBM25Score, combineScores, buildCorpusStats, DEFAULT_BM25_CONFIG } from "./algorithms/bm25.js";
-export type { BM25Config, DocumentStats, CorpusStats } from "./algorithms/bm25.js";
-export { BloomFilter, createBloomFilter } from "./algorithms/bloom-filter.js";
-export type { BloomFilterConfig } from "./algorithms/bloom-filter.js";
+export {
+  //
+  calculateLevenshteinDistance,
+  calculateDamerauLevenshteinDistance,
+  calculateNgramSimilarity,
+  distanceToSimilarity,
+  areStringsSimilar,
+} from "./algorithms/levenshtein.js";
+export {
+  //
+  calculateBM25Score,
+  calculateIDF,
+  normalizeBM25Score,
+  combineScores,
+  buildCorpusStats,
+  DEFAULT_BM25_CONFIG,
+} from "./algorithms/bm25.js";
+export type {
+  //
+  BM25Config,
+  DocumentStats,
+  CorpusStats,
+} from "./algorithms/bm25.js";
+export {
+  //
+  BloomFilter,
+  createBloomFilter,
+} from "./algorithms/bloom-filter.js";
+export type {
+  //
+  BloomFilterConfig,
+} from "./algorithms/bloom-filter.js";
 
 // Memory pooling utilities (for performance optimization)
-export { ObjectPool, ArrayPool, MapPool, SetPool, withPooledArray, globalArrayPool, globalMapPool, globalSetPool } from "./utils/memory-pool.js";
+export {
+  //
+  ObjectPool,
+  ArrayPool,
+  MapPool,
+  SetPool,
+  withPooledArray,
+  globalArrayPool,
+  globalMapPool,
+  globalSetPool,
+} from "./utils/memory-pool.js";
 
 /**
  * Quick start function with sensible defaults
@@ -79,7 +214,7 @@ export function createFuzzySearch(
 ) {
   const index = buildFuzzyIndex(dictionary, {
     config: {
-      languages: options.languages || ["german"],
+      languages: options.languages || ["english"],
       performance: options.performance || "balanced",
       maxResults: options.maxResults || 5,
     },

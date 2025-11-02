@@ -924,3 +924,234 @@ function searchWithPhrases(
 
   return results;
 }
+
+/**
+ * Update an existing index by adding new items
+ * Much faster than rebuilding the entire index
+ * 
+ * @param index - Existing fuzzy index to update
+ * @param newItems - New items to add (strings or objects)
+ * @param options - Optional configuration (uses index's existing config by default)
+ * @returns Updated index (mutates the original)
+ * 
+ * @example
+ * const index = buildFuzzyIndex(['apple', 'banana']);
+ * updateIndex(index, ['cherry', 'date']);
+ * // Index now contains: apple, banana, cherry, date
+ */
+export function updateIndex(
+  index: FuzzyIndex,
+  newItems: (string | any)[] = [],
+  options: Partial<BuildIndexOptions> = {}
+): FuzzyIndex {
+  if (!index || !index.config) {
+    throw new Error('Invalid index provided');
+  }
+
+  if (!newItems || newItems.length === 0) {
+    return index;
+  }
+
+  // Use existing index configuration
+  const config = index.config;
+  const featureSet = new Set(config.features);
+  
+  // Get language processors from index
+  const languageProcessors = Array.from(index.languageProcessors.values());
+  
+  if (languageProcessors.length === 0) {
+    throw new Error('No language processors found in index');
+  }
+
+  // Check if we're doing multi-field search
+  const hasFields = index.fields && index.fields.length > 0;
+  const isObjectArray = newItems.length > 0 && typeof newItems[0] === 'object' && newItems[0] !== null;
+
+  // Validate: if objects are provided, fields must be specified
+  if (isObjectArray && !hasFields) {
+    throw new Error('Index was not built with fields, cannot add objects');
+  }
+
+  // Track existing words to avoid duplicates
+  const existingWords = new Set(index.base.map(w => w.toLowerCase()));
+  let processed = 0;
+
+  for (const item of newItems) {
+    if (!item) continue;
+
+    // Handle multi-field objects
+    if (hasFields && isObjectArray) {
+      const fieldValues = extractFieldValues(item, index.fields);
+      if (!fieldValues) continue;
+
+      // Generate a unique ID for this object
+      const baseId = Object.values(fieldValues)[0] || `item_${index.base.length + processed}`;
+
+      // Skip if already exists
+      if (existingWords.has(baseId.toLowerCase())) continue;
+
+      // Store field data
+      if (index.fieldData) {
+        index.fieldData.set(baseId, fieldValues);
+      }
+
+      // Add to base
+      existingWords.add(baseId.toLowerCase());
+      index.base.push(baseId);
+
+      // Index each field separately
+      for (const [fieldName, fieldValue] of Object.entries(fieldValues)) {
+        if (!fieldValue || fieldValue.trim().length < config.minQueryLength) continue;
+
+        const trimmedValue = fieldValue.trim();
+
+        // Process this field value with each language processor
+        for (const processor of languageProcessors) {
+          processWordWithProcessorAndField(trimmedValue, baseId, fieldName, processor, index, config, featureSet);
+        }
+      }
+    } else {
+      // Handle simple string array
+      const word = typeof item === 'string' ? item : String(item);
+      if (word.trim().length < config.minQueryLength) continue;
+
+      const trimmedWord = word.trim();
+      
+      // Skip if already exists
+      if (existingWords.has(trimmedWord.toLowerCase())) continue;
+
+      existingWords.add(trimmedWord.toLowerCase());
+      index.base.push(trimmedWord);
+
+      // Process with each language processor
+      for (const processor of languageProcessors) {
+        processWordWithProcessor(trimmedWord, processor, index, config, featureSet);
+      }
+    }
+
+    processed++;
+    if (options.onProgress) {
+      options.onProgress(processed, newItems.length);
+    }
+  }
+
+  // Update inverted index if it exists
+  if (index.invertedIndex && index.documents) {
+    const { invertedIndex, documents } = buildInvertedIndex(
+      index.base,
+      languageProcessors,
+      config,
+      featureSet
+    );
+    index.invertedIndex = invertedIndex;
+    index.documents = documents;
+  }
+
+  // Clear cache since index has changed
+  if (index._cache) {
+    index._cache.clear();
+  }
+
+  return index;
+}
+
+/**
+ * Remove items from an existing index
+ * 
+ * @param index - Existing fuzzy index to update
+ * @param itemsToRemove - Items to remove (exact matches)
+ * @returns Updated index (mutates the original)
+ * 
+ * @example
+ * const index = buildFuzzyIndex(['apple', 'banana', 'cherry']);
+ * removeFromIndex(index, ['banana']);
+ * // Index now contains: apple, cherry
+ */
+export function removeFromIndex(
+  index: FuzzyIndex,
+  itemsToRemove: string[] = []
+): FuzzyIndex {
+  if (!index || !index.config) {
+    throw new Error('Invalid index provided');
+  }
+
+  if (!itemsToRemove || itemsToRemove.length === 0) {
+    return index;
+  }
+
+  // Create set of items to remove (case-insensitive)
+  const toRemove = new Set(itemsToRemove.map(item => item.toLowerCase()));
+
+  // Remove from base array
+  index.base = index.base.filter(word => !toRemove.has(word.toLowerCase()));
+
+  // Remove from variant maps
+  for (const [variant, baseWords] of index.variantToBase.entries()) {
+    const filtered = new Set(Array.from(baseWords).filter((word: string) => !toRemove.has(word.toLowerCase())));
+    if (filtered.size === 0) {
+      index.variantToBase.delete(variant);
+    } else {
+      index.variantToBase.set(variant, filtered);
+    }
+  }
+
+  // Remove from phonetic map
+  for (const [phonetic, baseWords] of index.phoneticToBase.entries()) {
+    const filtered = new Set(Array.from(baseWords).filter((word: string) => !toRemove.has(word.toLowerCase())));
+    if (filtered.size === 0) {
+      index.phoneticToBase.delete(phonetic);
+    } else {
+      index.phoneticToBase.set(phonetic, filtered);
+    }
+  }
+
+  // Remove from ngram index
+  for (const [ngram, baseWords] of index.ngramIndex.entries()) {
+    const filtered = new Set(Array.from(baseWords).filter((word: string) => !toRemove.has(word.toLowerCase())));
+    if (filtered.size === 0) {
+      index.ngramIndex.delete(ngram);
+    } else {
+      index.ngramIndex.set(ngram, filtered);
+    }
+  }
+
+  // Remove from synonym map
+  for (const [synonym, baseWords] of index.synonymMap.entries()) {
+    const filtered = new Set(Array.from(baseWords).filter((word: string) => !toRemove.has(word.toLowerCase())));
+    if (filtered.size === 0) {
+      index.synonymMap.delete(synonym);
+    } else {
+      index.synonymMap.set(synonym, filtered);
+    }
+  }
+
+  // Remove from field data if exists
+  if (index.fieldData) {
+    for (const item of itemsToRemove) {
+      index.fieldData.delete(item);
+    }
+  }
+
+  // Rebuild inverted index if it exists
+  if (index.invertedIndex && index.documents) {
+    const config = index.config;
+    const featureSet = new Set(config.features);
+    const languageProcessors = Array.from(index.languageProcessors.values());
+    
+    const { invertedIndex, documents } = buildInvertedIndex(
+      index.base,
+      languageProcessors,
+      config,
+      featureSet
+    );
+    index.invertedIndex = invertedIndex;
+    index.documents = documents;
+  }
+
+  // Clear cache since index has changed
+  if (index._cache) {
+    index._cache.clear();
+  }
+
+  return index;
+}

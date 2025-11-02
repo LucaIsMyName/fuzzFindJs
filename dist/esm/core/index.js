@@ -590,9 +590,145 @@ function searchWithPhrases(index, parsedQuery, limit, threshold, options) {
   }
   return results;
 }
+function updateIndex(index, newItems = [], options = {}) {
+  if (!index || !index.config) {
+    throw new Error("Invalid index provided");
+  }
+  if (!newItems || newItems.length === 0) {
+    return index;
+  }
+  const config = index.config;
+  const featureSet = new Set(config.features);
+  const languageProcessors = Array.from(index.languageProcessors.values());
+  if (languageProcessors.length === 0) {
+    throw new Error("No language processors found in index");
+  }
+  const hasFields = index.fields && index.fields.length > 0;
+  const isObjectArray = newItems.length > 0 && typeof newItems[0] === "object" && newItems[0] !== null;
+  if (isObjectArray && !hasFields) {
+    throw new Error("Index was not built with fields, cannot add objects");
+  }
+  const existingWords = new Set(index.base.map((w) => w.toLowerCase()));
+  let processed = 0;
+  for (const item of newItems) {
+    if (!item) continue;
+    if (hasFields && isObjectArray) {
+      const fieldValues = extractFieldValues(item, index.fields);
+      if (!fieldValues) continue;
+      const baseId = Object.values(fieldValues)[0] || `item_${index.base.length + processed}`;
+      if (existingWords.has(baseId.toLowerCase())) continue;
+      if (index.fieldData) {
+        index.fieldData.set(baseId, fieldValues);
+      }
+      existingWords.add(baseId.toLowerCase());
+      index.base.push(baseId);
+      for (const [fieldName, fieldValue] of Object.entries(fieldValues)) {
+        if (!fieldValue || fieldValue.trim().length < config.minQueryLength) continue;
+        const trimmedValue = fieldValue.trim();
+        for (const processor of languageProcessors) {
+          processWordWithProcessorAndField(trimmedValue, baseId, fieldName, processor, index, config, featureSet);
+        }
+      }
+    } else {
+      const word = typeof item === "string" ? item : String(item);
+      if (word.trim().length < config.minQueryLength) continue;
+      const trimmedWord = word.trim();
+      if (existingWords.has(trimmedWord.toLowerCase())) continue;
+      existingWords.add(trimmedWord.toLowerCase());
+      index.base.push(trimmedWord);
+      for (const processor of languageProcessors) {
+        processWordWithProcessor(trimmedWord, processor, index, config, featureSet);
+      }
+    }
+    processed++;
+    if (options.onProgress) {
+      options.onProgress(processed, newItems.length);
+    }
+  }
+  if (index.invertedIndex && index.documents) {
+    const { invertedIndex, documents } = buildInvertedIndex(
+      index.base,
+      languageProcessors,
+      config,
+      featureSet
+    );
+    index.invertedIndex = invertedIndex;
+    index.documents = documents;
+  }
+  if (index._cache) {
+    index._cache.clear();
+  }
+  return index;
+}
+function removeFromIndex(index, itemsToRemove = []) {
+  if (!index || !index.config) {
+    throw new Error("Invalid index provided");
+  }
+  if (!itemsToRemove || itemsToRemove.length === 0) {
+    return index;
+  }
+  const toRemove = new Set(itemsToRemove.map((item) => item.toLowerCase()));
+  index.base = index.base.filter((word) => !toRemove.has(word.toLowerCase()));
+  for (const [variant, baseWords] of index.variantToBase.entries()) {
+    const filtered = new Set(Array.from(baseWords).filter((word) => !toRemove.has(word.toLowerCase())));
+    if (filtered.size === 0) {
+      index.variantToBase.delete(variant);
+    } else {
+      index.variantToBase.set(variant, filtered);
+    }
+  }
+  for (const [phonetic, baseWords] of index.phoneticToBase.entries()) {
+    const filtered = new Set(Array.from(baseWords).filter((word) => !toRemove.has(word.toLowerCase())));
+    if (filtered.size === 0) {
+      index.phoneticToBase.delete(phonetic);
+    } else {
+      index.phoneticToBase.set(phonetic, filtered);
+    }
+  }
+  for (const [ngram, baseWords] of index.ngramIndex.entries()) {
+    const filtered = new Set(Array.from(baseWords).filter((word) => !toRemove.has(word.toLowerCase())));
+    if (filtered.size === 0) {
+      index.ngramIndex.delete(ngram);
+    } else {
+      index.ngramIndex.set(ngram, filtered);
+    }
+  }
+  for (const [synonym, baseWords] of index.synonymMap.entries()) {
+    const filtered = new Set(Array.from(baseWords).filter((word) => !toRemove.has(word.toLowerCase())));
+    if (filtered.size === 0) {
+      index.synonymMap.delete(synonym);
+    } else {
+      index.synonymMap.set(synonym, filtered);
+    }
+  }
+  if (index.fieldData) {
+    for (const item of itemsToRemove) {
+      index.fieldData.delete(item);
+    }
+  }
+  if (index.invertedIndex && index.documents) {
+    const config = index.config;
+    const featureSet = new Set(config.features);
+    const languageProcessors = Array.from(index.languageProcessors.values());
+    const { invertedIndex, documents } = buildInvertedIndex(
+      index.base,
+      languageProcessors,
+      config,
+      featureSet
+    );
+    index.invertedIndex = invertedIndex;
+    index.documents = documents;
+  }
+  if (index._cache) {
+    index._cache.clear();
+  }
+  return index;
+}
 export {
   batchSearch,
   buildFuzzyIndex,
-  getSuggestions
+  getSuggestions,
+  removeFromIndex,
+  updateIndex
 };
 //# sourceMappingURL=index.js.map

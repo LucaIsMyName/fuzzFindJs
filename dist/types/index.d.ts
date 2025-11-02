@@ -10,28 +10,28 @@
  * const results = getSuggestions(index, 'krankenh', 5);
  * ```
  */
-export { buildFuzzyIndex, getSuggestions, batchSearch } from "./core/index.js";
-export { calculateHighlights, formatHighlightedHTML } from "./core/highlighting.js";
-export { SearchCache, LRUCache } from "./core/cache.js";
-export { serializeIndex, deserializeIndex, saveIndexToLocalStorage, loadIndexFromLocalStorage, getSerializedSize } from "./core/serialization.js";
-export { removeAccents, hasAccents, normalizeForComparison, getAccentVariants } from "./utils/accent-normalization.js";
-export { filterStopWords, getStopWordsForLanguages, isStopWord, DEFAULT_STOP_WORDS } from "./utils/stop-words.js";
-export { isWordBoundary, matchesAtWordBoundary, findWordBoundaryMatches, matchesWord, matchesWildcard } from "./utils/word-boundaries.js";
-export { dataToIndex, dataToIndexAsync } from "./utils/data-indexer.js";
-export type { DataToIndexOptions } from "./utils/data-indexer.js";
-export { parseQuery, hasPhraseSyntax, normalizePhrase, splitPhraseWords } from "./utils/phrase-parser.js";
-export type { ParsedQuery } from "./utils/phrase-parser.js";
-export { detectLanguages, detectLanguagesWithConfidence, sampleTextForDetection, isValidLanguage, normalizeLanguageCode } from "./utils/language-detection.js";
-export type { LanguageDetectionResult } from "./utils/language-detection.js";
-export { DEFAULT_CONFIG, PERFORMANCE_CONFIGS, mergeConfig } from "./core/config.js";
-export type { FuzzyIndex, FuzzyConfig, SuggestionResult, SearchMatch, MatchType, FuzzyFeature, LanguageProcessor, BuildIndexOptions, SearchOptions, DebugInfo, SuggestionResultWithDebug } from "./core/types.js";
-export { LanguageRegistry, GermanProcessor, EnglishProcessor, SpanishProcessor, FrenchProcessor, BaseLanguageProcessor } from "./languages/index.js";
-export { calculateLevenshteinDistance, calculateDamerauLevenshteinDistance, calculateNgramSimilarity, distanceToSimilarity, areStringsSimilar } from "./algorithms/levenshtein.js";
-export { calculateBM25Score, calculateIDF, normalizeBM25Score, combineScores, buildCorpusStats, DEFAULT_BM25_CONFIG } from "./algorithms/bm25.js";
-export type { BM25Config, DocumentStats, CorpusStats } from "./algorithms/bm25.js";
-export { BloomFilter, createBloomFilter } from "./algorithms/bloom-filter.js";
-export type { BloomFilterConfig } from "./algorithms/bloom-filter.js";
-export { ObjectPool, ArrayPool, MapPool, SetPool, withPooledArray, globalArrayPool, globalMapPool, globalSetPool } from "./utils/memory-pool.js";
+export { buildFuzzyIndex, getSuggestions, batchSearch, updateIndex, removeFromIndex, } from "./core/index.js";
+export { calculateHighlights, formatHighlightedHTML, } from "./core/highlighting.js";
+export { SearchCache, LRUCache, } from "./core/cache.js";
+export { serializeIndex, deserializeIndex, saveIndexToLocalStorage, loadIndexFromLocalStorage, getSerializedSize, } from "./core/serialization.js";
+export { removeAccents, hasAccents, normalizeForComparison, getAccentVariants, } from "./utils/accent-normalization.js";
+export { filterStopWords, getStopWordsForLanguages, isStopWord, DEFAULT_STOP_WORDS, } from "./utils/stop-words.js";
+export { isWordBoundary, matchesAtWordBoundary, findWordBoundaryMatches, matchesWord, matchesWildcard, } from "./utils/word-boundaries.js";
+export { dataToIndex, dataToIndexAsync, } from "./utils/data-indexer.js";
+export type { DataToIndexOptions, } from "./utils/data-indexer.js";
+export { parseQuery, hasPhraseSyntax, normalizePhrase, splitPhraseWords, } from "./utils/phrase-parser.js";
+export type { ParsedQuery, } from "./utils/phrase-parser.js";
+export { detectLanguages, detectLanguagesWithConfidence, sampleTextForDetection, isValidLanguage, normalizeLanguageCode, } from "./utils/language-detection.js";
+export type { LanguageDetectionResult, } from "./utils/language-detection.js";
+export { DEFAULT_CONFIG, PERFORMANCE_CONFIGS, mergeConfig, } from "./core/config.js";
+export type { FuzzyIndex, FuzzyConfig, SuggestionResult, SearchMatch, MatchType, FuzzyFeature, LanguageProcessor, BuildIndexOptions, SearchOptions, DebugInfo, SuggestionResultWithDebug, } from "./core/types.js";
+export { LanguageRegistry, GermanProcessor, EnglishProcessor, SpanishProcessor, FrenchProcessor, BaseLanguageProcessor, } from "./languages/index.js";
+export { calculateLevenshteinDistance, calculateDamerauLevenshteinDistance, calculateNgramSimilarity, distanceToSimilarity, areStringsSimilar, } from "./algorithms/levenshtein.js";
+export { calculateBM25Score, calculateIDF, normalizeBM25Score, combineScores, buildCorpusStats, DEFAULT_BM25_CONFIG, } from "./algorithms/bm25.js";
+export type { BM25Config, DocumentStats, CorpusStats, } from "./algorithms/bm25.js";
+export { BloomFilter, createBloomFilter, } from "./algorithms/bloom-filter.js";
+export type { BloomFilterConfig, } from "./algorithms/bloom-filter.js";
+export { ObjectPool, ArrayPool, MapPool, SetPool, withPooledArray, globalArrayPool, globalMapPool, globalSetPool, } from "./utils/memory-pool.js";
 /**
  * Quick start function with sensible defaults
  * Perfect for getting started quickly
