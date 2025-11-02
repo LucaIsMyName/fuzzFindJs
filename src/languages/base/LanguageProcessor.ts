@@ -96,7 +96,15 @@ export abstract class BaseLanguageProcessor implements LanguageProcessor {
    * Get common word endings for this language (override for language-specific endings)
    */
   protected getCommonEndings(): string[] {
-    return ["s", "es", "ed", "ing", "er", "est"];
+    return [
+      //
+      "s",
+      "es",
+      "ed",
+      "ing",
+      "er",
+      "est",
+    ];
   }
 
   /**

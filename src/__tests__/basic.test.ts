@@ -3,6 +3,7 @@ import { buildFuzzyIndex, getSuggestions, createFuzzySearch } from '../index.js'
 
 describe('FuzzyFindJS Basic Tests', () => {
   const testDictionary = [
+    //
     'Krankenhaus',
     'Pflegeheim',
     'Ambulanz',
