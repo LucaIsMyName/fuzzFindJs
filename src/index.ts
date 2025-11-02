@@ -12,7 +12,7 @@
  */
 
 // Core functionality
-export { buildFuzzyIndex, getSuggestions } from "./core/index.js";
+export { buildFuzzyIndex, getSuggestions, batchSearch } from "./core/index.js";
 import { buildFuzzyIndex, getSuggestions } from "./core/index.js";
 
 // Highlighting utilities (for UI rendering)

@@ -153,6 +153,26 @@ function addToVariantMap(map: Map<string, Set<string>>, key: string, value: stri
 }
 
 /**
+ * Batch search multiple queries at once
+ * Deduplicates identical queries and returns results for all
+ */
+export function batchSearch(
+  index: FuzzyIndex,
+  queries: string[],
+  maxResults?: number,
+  options: SearchOptions = {}
+): Record<string, SuggestionResult[]> {
+  const results: Record<string, SuggestionResult[]> = {};
+  const uniqueQueries = [...new Set(queries)]; // Deduplicate
+
+  for (const query of uniqueQueries) {
+    results[query] = getSuggestions(index, query, maxResults, options);
+  }
+
+  return results;
+}
+
+/**
  * Get fuzzy search suggestions from an index
  * Auto-detects whether to use inverted index or classic hash-based approach
  */

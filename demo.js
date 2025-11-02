@@ -99,7 +99,7 @@ const DICTIONARIES = {
   'large-dataset': {
     name: 'Large Dataset (10000 items)',
     languages: ['english'],
-    words: generateLargeDataset(10000)
+    words: generateLargeDataset(2000)
   }
 };
 
