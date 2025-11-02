@@ -1,14 +1,14 @@
 /**
  * BM25 (Best Matching 25) Scoring Algorithm
  * Industry-standard probabilistic ranking function used by search engines
- * 
+ *
  * BM25 considers:
  * - Term frequency (TF): How often does the term appear?
  * - Inverse document frequency (IDF): How rare is the term?
  * - Document length normalization: Penalize very long documents
- * 
+ *
  * Formula: BM25(D, Q) = Σ IDF(qi) * (f(qi, D) * (k1 + 1)) / (f(qi, D) + k1 * (1 - b + b * |D| / avgdl))
- * 
+ *
  * Where:
  * - D = document
  * - Q = query
@@ -62,16 +62,12 @@ export interface CorpusStats {
 /**
  * Calculate IDF (Inverse Document Frequency) for a term
  * IDF = log((N - df + 0.5) / (df + 0.5) + 1)
- * 
+ *
  * Where:
  * - N = total number of documents
  * - df = document frequency (number of documents containing the term)
  */
-export function calculateIDF(
-  term: string,
-  corpusStats: CorpusStats,
-  config: BM25Config = DEFAULT_BM25_CONFIG
-): number {
+export function calculateIDF(term: string, corpusStats: CorpusStats, config: BM25Config = DEFAULT_BM25_CONFIG): number {
   const df = corpusStats.documentFrequencies.get(term) || 0;
   const N = corpusStats.totalDocs;
 
@@ -90,12 +86,7 @@ export function calculateIDF(
 /**
  * Calculate BM25 score for a single term in a document
  */
-export function calculateTermScore(
-  term: string,
-  docStats: DocumentStats,
-  corpusStats: CorpusStats,
-  config: BM25Config = DEFAULT_BM25_CONFIG
-): number {
+export function calculateTermScore(term: string, docStats: DocumentStats, corpusStats: CorpusStats, config: BM25Config = DEFAULT_BM25_CONFIG): number {
   const tf = docStats.termFrequencies.get(term) || 0;
 
   // If term not in document, score is 0
@@ -118,12 +109,7 @@ export function calculateTermScore(
  * Calculate BM25 score for a query against a document
  * Returns the sum of BM25 scores for all query terms
  */
-export function calculateBM25Score(
-  queryTerms: string[],
-  docStats: DocumentStats,
-  corpusStats: CorpusStats,
-  config: BM25Config = DEFAULT_BM25_CONFIG
-): number {
+export function calculateBM25Score(queryTerms: string[], docStats: DocumentStats, corpusStats: CorpusStats, config: BM25Config = DEFAULT_BM25_CONFIG): number {
   let totalScore = 0;
 
   for (const term of queryTerms) {
@@ -178,12 +164,7 @@ export function normalizeBM25Score(score: number, maxScore: number = 10): number
  * Combine BM25 score with fuzzy match score
  * Provides a hybrid scoring approach
  */
-export function combineScores(
-  bm25Score: number,
-  fuzzyScore: number,
-  bm25Weight: number = 0.6,
-  fuzzyWeight: number = 0.4
-): number {
+export function combineScores(bm25Score: number, fuzzyScore: number, bm25Weight: number = 0.6, fuzzyWeight: number = 0.4): number {
   // Normalize weights
   const totalWeight = bm25Weight + fuzzyWeight;
   const normalizedBM25Weight = bm25Weight / totalWeight;

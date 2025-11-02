@@ -19,7 +19,13 @@ import { BloomFilter } from "../algorithms/bloom-filter.js";
  * Build inverted index from documents
  * This runs ALONGSIDE the existing index building
  */
-export function buildInvertedIndex(words: string[], languageProcessors: LanguageProcessor[], config: FuzzyConfig, featureSet: Set<string>): { invertedIndex: InvertedIndex; documents: DocumentMetadata[] } {
+export function buildInvertedIndex(
+  //
+  words: string[],
+  languageProcessors: LanguageProcessor[],
+  config: FuzzyConfig,
+  featureSet: Set<string>
+): { invertedIndex: InvertedIndex; documents: DocumentMetadata[] } {
   const documents: DocumentMetadata[] = [];
   const invertedIndex: InvertedIndex = {
     termToPostings: new Map(),
@@ -147,19 +153,19 @@ export function buildInvertedIndex(words: string[], languageProcessors: Language
 
   // Build Bloom Filter if enabled or auto-enable for large datasets
   const shouldUseBloomFilter = config.useBloomFilter || words.length >= 10000;
-  
+
   if (shouldUseBloomFilter) {
     const falsePositiveRate = config.bloomFilterFalsePositiveRate || 0.01;
     const bloomFilter = new BloomFilter({
       expectedElements: invertedIndex.termToPostings.size,
       falsePositiveRate,
     });
-    
+
     // Add all terms to bloom filter
     for (const term of invertedIndex.termToPostings.keys()) {
       bloomFilter.add(term);
     }
-    
+
     invertedIndex.bloomFilter = bloomFilter;
   }
 
@@ -170,7 +176,14 @@ export function buildInvertedIndex(words: string[], languageProcessors: Language
  * Search using inverted index
  * Much faster than hash-based approach for large datasets
  */
-export function searchInvertedIndex(invertedIndex: InvertedIndex, documents: DocumentMetadata[], query: string, processors: LanguageProcessor[], config: FuzzyConfig): SearchMatch[] {
+export function searchInvertedIndex(
+  //
+  invertedIndex: InvertedIndex,
+  documents: DocumentMetadata[],
+  query: string,
+  processors: LanguageProcessor[],
+  config: FuzzyConfig
+): SearchMatch[] {
   const matches = new Map<number, SearchMatch>();
   const featureSet = new Set(config.features);
 
@@ -199,10 +212,8 @@ export function searchInvertedIndex(invertedIndex: InvertedIndex, documents: Doc
 
     // 6. Fuzzy matches (most expensive, do last)
     // OPTIMIZATION: Skip fuzzy matching for very large datasets in fast mode if we have enough good matches
-    const shouldSkipFuzzy = config.performance === 'fast' && 
-                           invertedIndex.termToPostings.size > 100000 && 
-                           matches.size >= config.maxResults * 2;
-    
+    const shouldSkipFuzzy = config.performance === "fast" && invertedIndex.termToPostings.size > 100000 && matches.size >= config.maxResults * 2;
+
     if (!shouldSkipFuzzy && (featureSet.has("missing-letters") || featureSet.has("extra-letters") || featureSet.has("transpositions"))) {
       findFuzzyMatchesInverted(normalizedQuery, invertedIndex, documents, matches, processor, config.maxEditDistance, config);
     }
@@ -215,7 +226,12 @@ export function searchInvertedIndex(invertedIndex: InvertedIndex, documents: Doc
 /**
  * Helper: Add document to posting list
  */
-function addToPostingList(postings: Map<string, PostingList>, term: string, docId: number): void {
+function addToPostingList(
+  //
+  postings: Map<string, PostingList>,
+  term: string,
+  docId: number
+): void {
   let posting = postings.get(term);
   if (!posting) {
     posting = { term, docIds: [] };
@@ -231,12 +247,19 @@ function addToPostingList(postings: Map<string, PostingList>, term: string, docI
 /**
  * Find exact matches in inverted index
  */
-function findExactMatchesInverted(query: string, invertedIndex: InvertedIndex, documents: DocumentMetadata[], matches: Map<number, SearchMatch>, language: string): void {
+function findExactMatchesInverted(
+  //
+  query: string,
+  invertedIndex: InvertedIndex,
+  documents: DocumentMetadata[],
+  matches: Map<number, SearchMatch>,
+  language: string
+): void {
   // BLOOM FILTER: Fast negative lookup
   if (invertedIndex.bloomFilter && !invertedIndex.bloomFilter.mightContain(query)) {
     return; // Definitely not in index, skip expensive lookup
   }
-  
+
   const posting = invertedIndex.termToPostings.get(query);
   if (!posting) return;
 
@@ -261,13 +284,21 @@ function findExactMatchesInverted(query: string, invertedIndex: InvertedIndex, d
  * Find prefix matches in inverted index
  * Now uses Trie for O(k) lookup instead of O(n) iteration!
  */
-function findPrefixMatchesInverted(query: string, invertedIndex: InvertedIndex, documents: DocumentMetadata[], matches: Map<number, SearchMatch>, language: string): void {
+function findPrefixMatchesInverted(
+  //
+  query: string,
+  invertedIndex: InvertedIndex,
+  documents: DocumentMetadata[],
+  matches: Map<number, SearchMatch>,
+  language: string
+): void {
   // Use Trie for fast prefix matching (100-1000x faster!)
   if (invertedIndex.termTrie) {
     const prefixMatches = invertedIndex.termTrie.findWithPrefix(query);
-    
+
     for (const [term, docIds] of prefixMatches) {
-      if (term !== query) { // Exclude exact matches (handled separately)
+      if (term !== query) {
+        // Exclude exact matches (handled separately)
         docIds.forEach((docId: number) => {
           const doc = documents[docId];
           if (!doc) return;
@@ -310,7 +341,14 @@ function findPrefixMatchesInverted(query: string, invertedIndex: InvertedIndex, 
 /**
  * Find phonetic matches in inverted index
  */
-function findPhoneticMatchesInverted(query: string, processor: LanguageProcessor, invertedIndex: InvertedIndex, documents: DocumentMetadata[], matches: Map<number, SearchMatch>): void {
+function findPhoneticMatchesInverted(
+  //
+  query: string,
+  processor: LanguageProcessor,
+  invertedIndex: InvertedIndex,
+  documents: DocumentMetadata[],
+  matches: Map<number, SearchMatch>
+): void {
   const phoneticCode = processor.getPhoneticCode(query);
   if (!phoneticCode) return;
 
@@ -337,7 +375,13 @@ function findPhoneticMatchesInverted(query: string, processor: LanguageProcessor
 /**
  * Find synonym matches in inverted index
  */
-function findSynonymMatchesInverted(query: string, invertedIndex: InvertedIndex, documents: DocumentMetadata[], matches: Map<number, SearchMatch>): void {
+function findSynonymMatchesInverted(
+  //
+  query: string,
+  invertedIndex: InvertedIndex,
+  documents: DocumentMetadata[],
+  matches: Map<number, SearchMatch>
+): void {
   const posting = invertedIndex.synonymToPostings.get(query);
   if (!posting) return;
 
@@ -360,7 +404,15 @@ function findSynonymMatchesInverted(query: string, invertedIndex: InvertedIndex,
 /**
  * Find n-gram matches in inverted index
  */
-function findNgramMatchesInverted(query: string, invertedIndex: InvertedIndex, documents: DocumentMetadata[], matches: Map<number, SearchMatch>, language: string, ngramSize: number): void {
+function findNgramMatchesInverted(
+  //
+  query: string,
+  invertedIndex: InvertedIndex,
+  documents: DocumentMetadata[],
+  matches: Map<number, SearchMatch>,
+  language: string,
+  ngramSize: number
+): void {
   if (query.length < ngramSize) return;
 
   const queryNgrams = generateNgrams(query, ngramSize);
@@ -395,38 +447,42 @@ function findNgramMatchesInverted(query: string, invertedIndex: InvertedIndex, d
  * Find fuzzy matches in inverted index
  * Optimized with length-based pre-filtering (5-10x faster)
  */
-function findFuzzyMatchesInverted(query: string, invertedIndex: InvertedIndex, documents: DocumentMetadata[], matches: Map<number, SearchMatch>, processor: LanguageProcessor, maxDistance: number, config: FuzzyConfig): void {
+function findFuzzyMatchesInverted(
+  //
+  query: string,
+  invertedIndex: InvertedIndex,
+  documents: DocumentMetadata[],
+  matches: Map<number, SearchMatch>,
+  processor: LanguageProcessor,
+  maxDistance: number,
+  config: FuzzyConfig
+): void {
   const queryLen = query.length;
   const minLen = queryLen - maxDistance;
   const maxLen = queryLen + maxDistance;
-  
+
   // Pre-compute for performance
-  const useTranspositions = config.features?.includes('transpositions');
-  
+  const useTranspositions = config.features?.includes("transpositions");
+
   // OPTIMIZATION: Dynamic candidate limit based on dataset size
   // Smaller limit for larger datasets to maintain sub-10ms performance
   const datasetSize = invertedIndex.termToPostings.size;
-  const MAX_FUZZY_CANDIDATES = datasetSize > 100000 ? 1000 :
-                               datasetSize > 50000 ? 1500 : 
-                               datasetSize > 20000 ? 3000 : 
-                               datasetSize > 10000 ? 5000 : 8000;
+  const MAX_FUZZY_CANDIDATES = datasetSize > 100000 ? 1000 : datasetSize > 50000 ? 1500 : datasetSize > 20000 ? 3000 : datasetSize > 10000 ? 5000 : 8000;
   let candidatesChecked = 0;
-  
+
   // OPTIMIZATION: For very large datasets (50K+), use Trie prefix filtering first
   let termsArray: [string, PostingList][];
-  
+
   if (datasetSize > 50000 && query.length >= 2) {
     // Get prefix matches from Trie (much faster than iterating all terms)
     // Use longer prefix for 100K+ datasets for better filtering
     const prefixLength = datasetSize > 100000 ? Math.min(3, query.length) : Math.min(2, query.length);
     const prefix = query.substring(0, prefixLength);
     const prefixMatches = invertedIndex.termTrie.search(prefix);
-    
+
     // Only check terms that share a prefix with the query
-    termsArray = prefixMatches
-      .map((term: string) => [term, invertedIndex.termToPostings.get(term)] as [string, PostingList | undefined])
-      .filter((entry: [string, PostingList | undefined]): entry is [string, PostingList] => entry[1] !== undefined);
-    
+    termsArray = prefixMatches.map((term: string) => [term, invertedIndex.termToPostings.get(term)] as [string, PostingList | undefined]).filter((entry: [string, PostingList | undefined]): entry is [string, PostingList] => entry[1] !== undefined);
+
     // If prefix filtering gives us too few candidates, fall back to full search
     if (termsArray.length < 100) {
       termsArray = Array.from(invertedIndex.termToPostings.entries());
@@ -434,14 +490,14 @@ function findFuzzyMatchesInverted(query: string, invertedIndex: InvertedIndex, d
   } else {
     termsArray = Array.from(invertedIndex.termToPostings.entries());
   }
-  
+
   // Sort by length similarity for better early termination
   termsArray.sort((a, b) => {
     const aDiff = Math.abs(a[0].length - queryLen);
     const bDiff = Math.abs(b[0].length - queryLen);
     return aDiff - bDiff;
   });
-  
+
   // Iterate through sorted terms with optimized filtering
   for (const [term, posting] of termsArray) {
     // OPTIMIZATION 1: Length-based pre-filter (O(1) check)
@@ -450,33 +506,32 @@ function findFuzzyMatchesInverted(query: string, invertedIndex: InvertedIndex, d
     if (termLen < minLen || termLen > maxLen) {
       continue;
     }
-    
+
     // OPTIMIZATION 2: Limit candidates in large datasets
     if (candidatesChecked >= MAX_FUZZY_CANDIDATES) {
       break;
     }
     candidatesChecked++;
-    
+
     // OPTIMIZATION 3: Early termination if we have enough high-quality matches
     // More aggressive for large datasets
     const earlyTerminationThreshold = datasetSize > 50000 ? config.maxResults * 2 : config.maxResults * 3;
     if (matches.size >= earlyTerminationThreshold) {
       break;
     }
-    
+
     // OPTIMIZATION 4: Skip if first character is too different (cheap check)
     if (query.length > 0 && term.length > 0) {
       const firstCharDiff = Math.abs(query.charCodeAt(0) - term.charCodeAt(0));
-      if (firstCharDiff > 10 && maxDistance < 2) { // Allow more variance for higher edit distance
+      if (firstCharDiff > 10 && maxDistance < 2) {
+        // Allow more variance for higher edit distance
         continue;
       }
     }
-    
+
     // Now do expensive edit distance calculation
-    const distance = useTranspositions
-      ? calculateDamerauLevenshteinDistance(query, term, maxDistance)
-      : calculateLevenshteinDistance(query, term, maxDistance);
-      
+    const distance = useTranspositions ? calculateDamerauLevenshteinDistance(query, term, maxDistance) : calculateLevenshteinDistance(query, term, maxDistance);
+
     if (distance <= maxDistance) {
       posting.docIds.forEach((docId) => {
         const doc = documents[docId];
@@ -503,13 +558,7 @@ function findFuzzyMatchesInverted(query: string, invertedIndex: InvertedIndex, d
  * Calculate BM25 scores for search matches
  * Enhances relevance ranking with statistical scoring
  */
-export function calculateBM25Scores(
-  matches: SearchMatch[],
-  queryTerms: string[],
-  invertedIndex: InvertedIndex,
-  documents: DocumentMetadata[],
-  config: FuzzyConfig
-): SearchMatch[] {
+export function calculateBM25Scores(matches: SearchMatch[], queryTerms: string[], invertedIndex: InvertedIndex, documents: DocumentMetadata[], config: FuzzyConfig): SearchMatch[] {
   if (!config.useBM25 || !invertedIndex.bm25Stats) {
     return matches;
   }
@@ -540,7 +589,7 @@ export function calculateBM25Scores(
     // Build document stats
     const termFrequencies = new Map<string, number>();
     const normalizedTerms = doc.normalized.toLowerCase().split(/\s+/);
-    
+
     for (const term of normalizedTerms) {
       termFrequencies.set(term, (termFrequencies.get(term) || 0) + 1);
     }

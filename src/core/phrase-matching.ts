@@ -2,7 +2,7 @@
  * Phrase matching algorithms for multi-word query support
  */
 
-import { calculateLevenshteinDistance, calculateDamerauLevenshteinDistance } from '../algorithms/levenshtein.js';
+import { calculateLevenshteinDistance, calculateDamerauLevenshteinDistance } from "../algorithms/levenshtein.js";
 
 export interface PhraseMatchOptions {
   /** Require exact phrase match (no typos) */
@@ -23,7 +23,7 @@ export interface PhraseMatchResult {
   /** Match score (0-1) */
   score: number;
   /** Type of match */
-  matchType: 'exact' | 'fuzzy' | 'proximity' | 'none';
+  matchType: "exact" | "fuzzy" | "proximity" | "none";
   /** Start position in text */
   startPos?: number;
   /** End position in text */
@@ -44,14 +44,15 @@ const DEFAULT_OPTIONS: Required<PhraseMatchOptions> = {
  * Match a phrase in text with various strategies
  */
 export function matchPhrase(
+  //
   text: string,
   phrase: string,
   options: PhraseMatchOptions = {}
 ): PhraseMatchResult {
   const opts = { ...DEFAULT_OPTIONS, ...options };
-  
+
   if (!text || !phrase) {
-    return { matched: false, score: 0, matchType: 'none' };
+    return { matched: false, score: 0, matchType: "none" };
   }
 
   const normalizedText = text.toLowerCase();
@@ -60,61 +61,57 @@ export function matchPhrase(
   // Strategy 1: Exact phrase match (highest score)
   const exactMatch = findExactPhrase(normalizedText, normalizedPhrase);
   if (exactMatch.matched) {
-    return { ...exactMatch, score: 1.0, matchType: 'exact' };
+    return { ...exactMatch, score: 1.0, matchType: "exact" };
   }
 
   // If exact match required, stop here
   if (opts.exactMatch) {
-    return { matched: false, score: 0, matchType: 'none' };
+    return { matched: false, score: 0, matchType: "none" };
   }
 
   // Strategy 2: Fuzzy phrase match (allow typos)
-  const fuzzyMatch = findFuzzyPhrase(
-    normalizedText,
-    normalizedPhrase,
-    opts.maxEditDistance,
-    opts.useTranspositions
-  );
+  const fuzzyMatch = findFuzzyPhrase(normalizedText, normalizedPhrase, opts.maxEditDistance, opts.useTranspositions);
   if (fuzzyMatch.matched) {
-    return { ...fuzzyMatch, matchType: 'fuzzy' };
+    return { ...fuzzyMatch, matchType: "fuzzy" };
   }
 
   // Strategy 3: Proximity match (words nearby)
-  const proximityMatch = findProximityMatch(
-    normalizedText,
-    normalizedPhrase,
-    opts.maxProximityDistance
-  );
+  const proximityMatch = findProximityMatch(normalizedText, normalizedPhrase, opts.maxProximityDistance);
   if (proximityMatch.matched) {
-    return { ...proximityMatch, matchType: 'proximity' };
+    return { ...proximityMatch, matchType: "proximity" };
   }
 
-  return { matched: false, score: 0, matchType: 'none' };
+  return { matched: false, score: 0, matchType: "none" };
 }
 
 /**
  * Find exact phrase in text
  */
-function findExactPhrase(text: string, phrase: string): PhraseMatchResult {
+function findExactPhrase(
+  //
+  text: string,
+  phrase: string
+): PhraseMatchResult {
   const index = text.indexOf(phrase);
-  
+
   if (index !== -1) {
     return {
       matched: true,
       score: 1.0,
-      matchType: 'exact',
+      matchType: "exact",
       startPos: index,
       endPos: index + phrase.length,
     };
   }
 
-  return { matched: false, score: 0, matchType: 'none' };
+  return { matched: false, score: 0, matchType: "none" };
 }
 
 /**
  * Find phrase with fuzzy matching (allow typos)
  */
 function findFuzzyPhrase(
+  //
   text: string,
   phrase: string,
   maxEditDistance: number,
@@ -126,15 +123,13 @@ function findFuzzyPhrase(
   // Try to find consecutive words that match the phrase
   for (let i = 0; i <= textWords.length - phraseWords.length; i++) {
     const segment = textWords.slice(i, i + phraseWords.length);
-    
+
     // Check if this segment matches the phrase with fuzzy matching
     let totalDistance = 0;
     let allMatch = true;
 
     for (let j = 0; j < phraseWords.length; j++) {
-      const distance = useTranspositions
-        ? calculateDamerauLevenshteinDistance(phraseWords[j], segment[j], maxEditDistance)
-        : calculateLevenshteinDistance(phraseWords[j], segment[j], maxEditDistance);
+      const distance = useTranspositions ? calculateDamerauLevenshteinDistance(phraseWords[j], segment[j], maxEditDistance) : calculateLevenshteinDistance(phraseWords[j], segment[j], maxEditDistance);
 
       if (distance > maxEditDistance) {
         allMatch = false;
@@ -146,26 +141,25 @@ function findFuzzyPhrase(
     if (allMatch) {
       // Calculate score based on edit distance
       const maxPossibleDistance = phraseWords.length * maxEditDistance;
-      const score = maxPossibleDistance > 0
-        ? 0.7 + (0.2 * (1 - totalDistance / maxPossibleDistance))
-        : 0.9;
+      const score = maxPossibleDistance > 0 ? 0.7 + 0.2 * (1 - totalDistance / maxPossibleDistance) : 0.9;
 
       return {
         matched: true,
         score,
-        matchType: 'fuzzy',
+        matchType: "fuzzy",
         matchedWords: segment,
       };
     }
   }
 
-  return { matched: false, score: 0, matchType: 'none' };
+  return { matched: false, score: 0, matchType: "none" };
 }
 
 /**
  * Find words in proximity (nearby but not necessarily consecutive)
  */
 function findProximityMatch(
+  //
   text: string,
   phrase: string,
   maxDistance: number
@@ -185,8 +179,8 @@ function findProximityMatch(
   });
 
   // Check if all words were found
-  if (positions.some(p => p.length === 0)) {
-    return { matched: false, score: 0, matchType: 'none' };
+  if (positions.some((p) => p.length === 0)) {
+    return { matched: false, score: 0, matchType: "none" };
   }
 
   // Find the best combination where words are close together
@@ -198,7 +192,7 @@ function findProximityMatch(
       // Calculate total distance
       const sorted = [...currentPositions].sort((a, b) => a - b);
       const distance = sorted[sorted.length - 1] - sorted[0];
-      
+
       if (distance < bestDistance) {
         bestDistance = distance;
         bestPositions = [...currentPositions];
@@ -216,17 +210,17 @@ function findProximityMatch(
   // Check if words are within max distance
   if (bestDistance <= maxDistance) {
     // Score based on proximity (closer = higher score)
-    const score = 0.5 + (0.2 * (1 - bestDistance / maxDistance));
+    const score = 0.5 + 0.2 * (1 - bestDistance / maxDistance);
 
     return {
       matched: true,
       score,
-      matchType: 'proximity',
-      matchedWords: bestPositions.map(i => textWords[i]),
+      matchType: "proximity",
+      matchedWords: bestPositions.map((i) => textWords[i]),
     };
   }
 
-  return { matched: false, score: 0, matchType: 'none' };
+  return { matched: false, score: 0, matchType: "none" };
 }
 
 /**
@@ -234,13 +228,14 @@ function findProximityMatch(
  * Returns 0 if no match, or a boosted score if phrase matches
  */
 export function calculatePhraseScore(
+  //
   text: string,
   phrase: string,
   baseScore: number,
   options: PhraseMatchOptions = {}
 ): number {
   const match = matchPhrase(text, phrase, options);
-  
+
   if (!match.matched) {
     return 0;
   }

@@ -7,6 +7,7 @@
  * Extract field values from an object or string
  */
 export function extractFieldValues(
+  //
   item: any,
   fields?: string[]
 ): Record<string, string> | null {
@@ -16,21 +17,21 @@ export function extractFieldValues(
   }
 
   // If item is a string, can't extract fields
-  if (typeof item === 'string') {
+  if (typeof item === "string") {
     return null;
   }
 
   // If item is an object, extract field values
-  if (typeof item === 'object' && item !== null) {
+  if (typeof item === "object" && item !== null) {
     const fieldValues: Record<string, string> = {};
-    
+
     for (const field of fields) {
       const value = item[field];
       if (value !== undefined && value !== null) {
         fieldValues[field] = String(value);
       }
     }
-    
+
     return Object.keys(fieldValues).length > 0 ? fieldValues : null;
   }
 
@@ -40,23 +41,27 @@ export function extractFieldValues(
 /**
  * Get all searchable text from field values
  */
-export function getSearchableText(fieldValues: Record<string, string>): string[] {
-  return Object.values(fieldValues).filter(v => v && v.trim().length > 0);
+export function getSearchableText(
+  //
+  fieldValues: Record<string, string>
+): string[] {
+  return Object.values(fieldValues).filter((v) => v && v.trim().length > 0);
 }
 
 /**
  * Normalize field weights (ensure all fields have a weight)
  */
 export function normalizeFieldWeights(
+  //
   fields: string[],
   fieldWeights?: Record<string, number>
 ): Record<string, number> {
   const normalized: Record<string, number> = {};
-  
+
   for (const field of fields) {
     normalized[field] = fieldWeights?.[field] ?? 1.0;
   }
-  
+
   return normalized;
 }
 
@@ -64,6 +69,7 @@ export function normalizeFieldWeights(
  * Apply field weight to a score
  */
 export function applyFieldWeight(
+  //
   baseScore: number,
   fieldWeight: number
 ): number {

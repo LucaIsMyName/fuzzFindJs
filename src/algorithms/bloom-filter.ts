@@ -1,13 +1,13 @@
 /**
  * Bloom Filter Implementation
  * Probabilistic data structure for fast membership testing
- * 
+ *
  * Benefits:
  * - O(1) lookup time
  * - Space-efficient (much smaller than Set/Map)
  * - No false negatives (if it says "no", it's definitely not there)
  * - Small false positive rate (configurable)
- * 
+ *
  * Use case: Quickly check if a term exists before expensive lookups
  * Saves 50-70% of lookup time for non-existent terms
  */
@@ -31,13 +31,13 @@ export class BloomFilter {
     // where n = expected elements, p = false positive rate
     const n = config.expectedElements;
     const p = config.falsePositiveRate;
-    
-    this.size = Math.ceil(-(n * Math.log(p)) / (Math.log(2) ** 2));
-    
+
+    this.size = Math.ceil(-(n * Math.log(p)) / Math.log(2) ** 2);
+
     // Calculate optimal number of hash functions
     // k = (m / n) * ln(2)
     this.numHashFunctions = Math.ceil((this.size / n) * Math.log(2));
-    
+
     // Use Uint8Array for efficient bit storage (8 bits per byte)
     this.bitArray = new Uint8Array(Math.ceil(this.size / 8));
   }
@@ -47,13 +47,13 @@ export class BloomFilter {
    */
   add(item: string): void {
     const hashes = this.getHashes(item);
-    
+
     for (const hash of hashes) {
       const byteIndex = Math.floor(hash / 8);
       const bitIndex = hash % 8;
-      this.bitArray[byteIndex] |= (1 << bitIndex);
+      this.bitArray[byteIndex] |= 1 << bitIndex;
     }
-    
+
     this.numElements++;
   }
 
@@ -65,16 +65,16 @@ export class BloomFilter {
    */
   mightContain(item: string): boolean {
     const hashes = this.getHashes(item);
-    
+
     for (const hash of hashes) {
       const byteIndex = Math.floor(hash / 8);
       const bitIndex = hash % 8;
-      
+
       if ((this.bitArray[byteIndex] & (1 << bitIndex)) === 0) {
         return false; // Definitely not in set
       }
     }
-    
+
     return true; // Might be in set
   }
 
@@ -85,15 +85,15 @@ export class BloomFilter {
   private getHashes(item: string): number[] {
     const hash1 = this.hash(item, 0);
     const hash2 = this.hash(item, 1);
-    
+
     const hashes: number[] = [];
-    
+
     for (let i = 0; i < this.numHashFunctions; i++) {
       // Double hashing: h(i) = (hash1 + i * hash2) mod m
       const combinedHash = (hash1 + i * hash2) % this.size;
       hashes.push(Math.abs(combinedHash));
     }
-    
+
     return hashes;
   }
 
@@ -102,12 +102,12 @@ export class BloomFilter {
    */
   private hash(str: string, seed: number): number {
     let hash = 2166136261 ^ seed; // FNV offset basis
-    
+
     for (let i = 0; i < str.length; i++) {
       hash ^= str.charCodeAt(i);
       hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
     }
-    
+
     return hash >>> 0; // Convert to unsigned 32-bit integer
   }
 
@@ -117,13 +117,13 @@ export class BloomFilter {
    */
   getFalsePositiveRate(): number {
     if (this.numElements === 0) return 0;
-    
+
     // p = (1 - e^(-kn/m))^k
     // where k = num hash functions, n = num elements, m = bit array size
     const k = this.numHashFunctions;
     const n = this.numElements;
     const m = this.size;
-    
+
     return Math.pow(1 - Math.exp((-k * n) / m), k);
   }
 
@@ -174,24 +174,19 @@ export class BloomFilter {
   /**
    * Deserialize bloom filter from JSON
    */
-  static fromJSON(data: {
-    bitArray: number[];
-    size: number;
-    numHashFunctions: number;
-    numElements: number;
-  }): BloomFilter {
+  static fromJSON(data: { bitArray: number[]; size: number; numHashFunctions: number; numElements: number }): BloomFilter {
     // Create a dummy filter with minimal config
     const filter = new BloomFilter({
       expectedElements: 100,
       falsePositiveRate: 0.01,
     });
-    
+
     // Override with saved data
     filter.bitArray = new Uint8Array(data.bitArray);
     filter.size = data.size;
     filter.numHashFunctions = data.numHashFunctions;
     filter.numElements = data.numElements;
-    
+
     return filter;
   }
 }

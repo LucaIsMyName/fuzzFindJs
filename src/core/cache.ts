@@ -39,7 +39,11 @@ export class LRUCache<K, V> {
    * Set value in cache
    * Evicts oldest entry if capacity exceeded
    */
-  set(key: K, value: V): void {
+  set(
+    //
+    key: K,
+    value: V
+  ): void {
     // Remove if exists (to update position)
     if (this.cache.has(key)) {
       this.cache.delete(key);
@@ -81,7 +85,12 @@ export class LRUCache<K, V> {
   /**
    * Get cache statistics
    */
-  getStats(): { size: number; capacity: number; utilization: number } {
+  getStats(): {
+    //
+    size: number;
+    capacity: number;
+    utilization: number;
+  } {
     return {
       size: this.cache.size,
       capacity: this.capacity,
@@ -148,6 +157,7 @@ export class SearchCache {
    * Get cache statistics
    */
   getStats(): {
+    //
     size: number;
     capacity: number;
     hits: number;

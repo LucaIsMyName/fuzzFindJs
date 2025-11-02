@@ -2553,6 +2553,66 @@ MIT © Luca Mack
 - **[CHANGELOG.md](./CHANGELOG.md)** - Version history and changes
 - **[LOCALSTORAGE_FEATURE.md](./LOCALSTORAGE_FEATURE.md)** - Demo persistence feature details
 
+## 📝 IDE Support & IntelliSense
+
+FuzzyFindJS provides comprehensive **JSDoc documentation** for all public APIs, giving you excellent IDE support:
+
+### Features
+
+- ✅ **Full JSDoc Coverage** - All public functions, types, and parameters documented
+- ✅ **IntelliSense Support** - Autocomplete and parameter hints in VS Code, WebStorm, etc.
+- ✅ **Type Safety** - Full TypeScript type definitions included
+- ✅ **Inline Examples** - Code examples in JSDoc for quick reference
+- ✅ **Parameter Descriptions** - Detailed explanations for all options
+
+### Example IDE Experience
+
+When you type `buildFuzzyIndex(` in your IDE, you'll see:
+
+```typescript
+buildFuzzyIndex(words, options?)
+```
+
+**Hover documentation shows:**
+> Builds a fuzzy search index from an array of words or objects.
+> 
+> This is the primary function for creating a searchable index. It processes each word/object
+> through language-specific processors, builds various indices (phonetic, n-gram, synonym),
+> and automatically enables optimizations like inverted index for large datasets (10k+ items).
+>
+> **@param** words - Array of strings to index, or objects with fields to search across  
+> **@param** options - Configuration options for index building  
+> **@returns** A searchable fuzzy index containing all processed data and metadata
+
+**With inline examples:**
+```typescript
+// Simple string array
+const index = buildFuzzyIndex(['apple', 'banana', 'cherry'], {
+  config: { languages: ['english'], performance: 'fast' }
+});
+
+// Multi-field objects
+const products = [
+  { name: 'iPhone', description: 'Smartphone', price: 999 }
+];
+const index = buildFuzzyIndex(products, {
+  fields: ['name', 'description'],
+  fieldWeights: { name: 2.0, description: 1.0 }
+});
+```
+
+### Documented Functions
+
+All major functions include comprehensive JSDoc:
+
+- `buildFuzzyIndex()` - Build searchable index
+- `getSuggestions()` - Search the index
+- `batchSearch()` - Search multiple queries
+- `createFuzzySearch()` - Quick start helper
+- `updateIndex()` - Add items to existing index
+- `removeFromIndex()` - Remove items from index
+- Plus all utility functions (serialization, highlighting, caching, etc.)
+
 ## To Do's
 
 - [ ] Add (optional) dictionary imports for english, german ,spanish, france, ... as json files with the eg 500 most common expressions to be used as dictionary

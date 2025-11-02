@@ -7,7 +7,12 @@
  * Calculate Levenshtein distance with maximum threshold
  * Returns early if distance exceeds maxDistance for performance
  */
-export function calculateLevenshteinDistance(str1: string, str2: string, maxDistance: number = Infinity): number {
+export function calculateLevenshteinDistance(
+  //
+  str1: string,
+  str2: string,
+  maxDistance: number = Infinity
+): number {
   const len1 = str1.length;
   const len2 = str2.length;
 
