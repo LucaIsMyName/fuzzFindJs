@@ -42,12 +42,24 @@ import { filterStopWords } from "../utils/stop-words.js";
 import { matchesWord, matchesWildcard } from "../utils/word-boundaries.js";
 import { parseQuery } from "../utils/phrase-parser.js";
 import { matchPhrase } from "./phrase-matching.js";
+import { detectLanguages, sampleTextForDetection } from "../utils/language-detection.js";
 
 /**
  * Build a fuzzy search index from a dictionary of words or objects
  */
 export function buildFuzzyIndex(words: (string | any)[] = [], options: BuildIndexOptions = {}): FuzzyIndex {
+  // AUTO-DETECTION: Detect languages if not explicitly specified
+  const userSpecifiedLanguages = options.config?.languages;
+  const shouldAutoDetect = !userSpecifiedLanguages || userSpecifiedLanguages.includes('auto');
+  
   const config = mergeConfig(options.config);
+  
+  if (shouldAutoDetect) {
+    const sampleText = sampleTextForDetection(words, 100);
+    const detectedLanguages = detectLanguages(sampleText);
+    config.languages = detectedLanguages;
+  }
+  
   validateConfig(config);
 
   // Convert features array to Set for O(1) lookup performance

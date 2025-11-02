@@ -10,8 +10,16 @@ import { filterStopWords } from "../utils/stop-words.js";
 import { matchesWildcard, matchesWord } from "../utils/word-boundaries.js";
 import { parseQuery } from "../utils/phrase-parser.js";
 import { matchPhrase } from "./phrase-matching.js";
+import { sampleTextForDetection, detectLanguages } from "../utils/language-detection.js";
 function buildFuzzyIndex(words = [], options = {}) {
+  const userSpecifiedLanguages = options.config?.languages;
+  const shouldAutoDetect = !userSpecifiedLanguages || userSpecifiedLanguages.includes("auto");
   const config = mergeConfig(options.config);
+  if (shouldAutoDetect) {
+    const sampleText = sampleTextForDetection(words, 100);
+    const detectedLanguages = detectLanguages(sampleText);
+    config.languages = detectedLanguages;
+  }
   validateConfig(config);
   const featureSet = new Set(config.features);
   const languageProcessors = options.languageProcessors || LanguageRegistry.getProcessors(config.languages);
@@ -403,14 +411,12 @@ function findFuzzyMatches(query, index, matches, processor, config) {
       if (distance <= maxDistance) {
         words.forEach((word) => {
           const existingMatch = matches.get(word);
-          const normalizedWord = processor.normalize(word);
-          const actualDistance = useTranspositions ? calculateDamerauLevenshteinDistance(query, normalizedWord, maxDistance) : calculateLevenshteinDistance(query, normalizedWord, maxDistance);
-          if (!existingMatch || existingMatch.matchType !== "exact" && existingMatch.matchType !== "prefix" && (existingMatch.editDistance || Infinity) > actualDistance) {
+          if (!existingMatch || existingMatch.matchType !== "exact" && existingMatch.matchType !== "prefix" && (existingMatch.editDistance || Infinity) > distance) {
             matches.set(word, {
               word,
               normalized: variant,
               matchType: "fuzzy",
-              editDistance: actualDistance,
+              editDistance: distance,
               language: processor.language
             });
           }

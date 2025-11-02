@@ -12,8 +12,16 @@ const stopWords = require("../utils/stop-words.cjs");
 const wordBoundaries = require("../utils/word-boundaries.cjs");
 const phraseParser = require("../utils/phrase-parser.cjs");
 const phraseMatching = require("./phrase-matching.cjs");
+const languageDetection = require("../utils/language-detection.cjs");
 function buildFuzzyIndex(words = [], options = {}) {
+  const userSpecifiedLanguages = options.config?.languages;
+  const shouldAutoDetect = !userSpecifiedLanguages || userSpecifiedLanguages.includes("auto");
   const config$1 = config.mergeConfig(options.config);
+  if (shouldAutoDetect) {
+    const sampleText = languageDetection.sampleTextForDetection(words, 100);
+    const detectedLanguages = languageDetection.detectLanguages(sampleText);
+    config$1.languages = detectedLanguages;
+  }
   config.validateConfig(config$1);
   const featureSet = new Set(config$1.features);
   const languageProcessors = options.languageProcessors || index.LanguageRegistry.getProcessors(config$1.languages);
@@ -405,14 +413,12 @@ function findFuzzyMatches(query, index2, matches, processor, config2) {
       if (distance <= maxDistance) {
         words.forEach((word) => {
           const existingMatch = matches.get(word);
-          const normalizedWord = processor.normalize(word);
-          const actualDistance = useTranspositions ? levenshtein.calculateDamerauLevenshteinDistance(query, normalizedWord, maxDistance) : levenshtein.calculateLevenshteinDistance(query, normalizedWord, maxDistance);
-          if (!existingMatch || existingMatch.matchType !== "exact" && existingMatch.matchType !== "prefix" && (existingMatch.editDistance || Infinity) > actualDistance) {
+          if (!existingMatch || existingMatch.matchType !== "exact" && existingMatch.matchType !== "prefix" && (existingMatch.editDistance || Infinity) > distance) {
             matches.set(word, {
               word,
               normalized: variant,
               matchType: "fuzzy",
-              editDistance: actualDistance,
+              editDistance: distance,
               language: processor.language
             });
           }
