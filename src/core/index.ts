@@ -1,14 +1,47 @@
-import type { FuzzyIndex, FuzzyConfig, SuggestionResult, SearchMatch, BuildIndexOptions, SearchOptions, LanguageProcessor } from "./types.js";
-import { mergeConfig, validateConfig } from "./config.js";
-import { LanguageRegistry } from "../languages/index.js";
-import { calculateLevenshteinDistance, calculateDamerauLevenshteinDistance, calculateNgramSimilarity } from "../algorithms/levenshtein.js";
-import { buildInvertedIndex, searchInvertedIndex } from "./inverted-index.js";
-import { calculateHighlights } from "./highlighting.js";
-import { SearchCache } from "./cache.js";
+import type {
+  //
+  FuzzyIndex,
+  FuzzyConfig,
+  SuggestionResult,
+  SearchMatch,
+  BuildIndexOptions,
+  SearchOptions,
+  LanguageProcessor,
+} from "./types.js";
+import {
+  //
+  mergeConfig,
+  validateConfig,
+} from "./config.js";
+import {
+  //
+  LanguageRegistry,
+} from "../languages/index.js";
+import {
+  //
+  calculateLevenshteinDistance,
+  calculateDamerauLevenshteinDistance,
+  calculateNgramSimilarity,
+} from "../algorithms/levenshtein.js";
+import {
+  //
+  buildInvertedIndex,
+  searchInvertedIndex,
+} from "./inverted-index.js";
+import {
+  //
+  calculateHighlights,
+} from "./highlighting.js";
+import {
+  //
+  SearchCache,
+} from "./cache.js";
 import { removeAccents } from "../utils/accent-normalization.js";
 import { extractFieldValues, normalizeFieldWeights } from "./field-weighting.js";
 import { filterStopWords } from "../utils/stop-words.js";
 import { matchesWord, matchesWildcard } from "../utils/word-boundaries.js";
+import { parseQuery } from "../utils/phrase-parser.js";
+import { matchPhrase } from "./phrase-matching.js";
 
 /**
  * Build a fuzzy search index from a dictionary of words or objects
@@ -333,6 +366,14 @@ export function getSuggestions(index: FuzzyIndex, query: string, maxResults?: nu
     return [];
   }
 
+  // PHRASE SEARCH: Check if query contains phrases
+  const parsedQuery = parseQuery(query);
+  
+  // If query has phrases, use phrase search
+  if (parsedQuery.hasPhrases) {
+    return searchWithPhrases(index, parsedQuery, limit, threshold, options);
+  }
+
   // STOP WORDS: Filter stop words from query if enabled
   let processedQuery = query;
   if (config.enableStopWords && config.stopWords && config.stopWords.length > 0) {
@@ -404,9 +445,9 @@ export function getSuggestions(index: FuzzyIndex, query: string, maxResults?: nu
  */
 function findExactMatches(query: string, index: FuzzyIndex, matches: Map<string, SearchMatch>, language: string): void {
   const wordBoundaries = index.config.wordBoundaries || false;
-  
+
   // Check for wildcard pattern
-  if (query.includes('*')) {
+  if (query.includes("*")) {
     // Wildcard search
     for (const baseWord of index.base) {
       if (matchesWildcard(baseWord, query)) {
@@ -423,7 +464,7 @@ function findExactMatches(query: string, index: FuzzyIndex, matches: Map<string,
     }
     return;
   }
-  
+
   // Check for exact matches in the variant map
   const exactMatches = index.variantToBase.get(query);
   if (exactMatches) {
@@ -432,7 +473,7 @@ function findExactMatches(query: string, index: FuzzyIndex, matches: Map<string,
       if (wordBoundaries && !matchesWord(word, query, wordBoundaries)) {
         return;
       }
-      
+
       // Always add exact matches, even if already found with lower score
       const existing = matches.get(word);
       if (!existing || existing.matchType !== "exact") {
@@ -469,7 +510,7 @@ function findExactMatches(query: string, index: FuzzyIndex, matches: Map<string,
  */
 function findPrefixMatches(query: string, index: FuzzyIndex, matches: Map<string, SearchMatch>, language: string): void {
   const wordBoundaries = index.config.wordBoundaries || false;
-  
+
   for (const [variant, words] of index.variantToBase.entries()) {
     if (variant.startsWith(query) && variant !== query) {
       words.forEach((word) => {
@@ -477,7 +518,7 @@ function findPrefixMatches(query: string, index: FuzzyIndex, matches: Map<string
         if (wordBoundaries && !matchesWord(word, query, wordBoundaries)) {
           return;
         }
-        
+
         if (!matches.has(word)) {
           matches.set(word, {
             word,
@@ -572,10 +613,8 @@ function findFuzzyMatches(query: string, index: FuzzyIndex, matches: Map<string,
   for (const [variant, words] of index.variantToBase.entries()) {
     if (Math.abs(variant.length - query.length) <= maxDistance) {
       // Use Damerau-Levenshtein if transpositions feature is enabled
-      const useTranspositions = index.config.features?.includes('transpositions');
-      const distance = useTranspositions
-        ? calculateDamerauLevenshteinDistance(query, variant, maxDistance)
-        : calculateLevenshteinDistance(query, variant, maxDistance);
+      const useTranspositions = index.config.features?.includes("transpositions");
+      const distance = useTranspositions ? calculateDamerauLevenshteinDistance(query, variant, maxDistance) : calculateLevenshteinDistance(query, variant, maxDistance);
 
       if (distance <= maxDistance) {
         words.forEach((word) => {
@@ -730,6 +769,125 @@ function getSuggestionsInverted(
     .filter((result): result is SuggestionResult => result !== null)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
+
+  return results;
+}
+
+/**
+ * Search with phrase support
+ * Handles queries containing quoted phrases
+ */
+function searchWithPhrases(
+  index: FuzzyIndex,
+  parsedQuery: ReturnType<typeof parseQuery>,
+  limit: number,
+  threshold: number,
+  options: SearchOptions
+): SuggestionResult[] {
+  const config = index.config;
+  const useTranspositions = config.features.includes('transpositions');
+  
+  // Get phrase match options
+  const phraseOptions = {
+    exactMatch: false,
+    maxEditDistance: 1,
+    proximityBonus: 1.5,
+    maxProximityDistance: 3,
+    useTranspositions,
+  };
+
+  // Search all base words for phrase matches
+  const phraseMatches = new Map<string, { score: number; phraseCount: number }>();
+
+  // For each phrase, find matching words
+  for (const phrase of parsedQuery.phrases) {
+    for (const word of index.base) {
+      const match = matchPhrase(word, phrase, phraseOptions);
+      
+      if (match.matched) {
+        const existing = phraseMatches.get(word);
+        const newScore = match.score * phraseOptions.proximityBonus;
+        
+        if (existing) {
+          // Multiple phrases matched - boost even more
+          phraseMatches.set(word, {
+            score: Math.max(existing.score, newScore),
+            phraseCount: existing.phraseCount + 1,
+          });
+        } else {
+          phraseMatches.set(word, { score: newScore, phraseCount: 1 });
+        }
+      }
+    }
+  }
+
+  // If we have regular terms too, search for them
+  let termMatches = new Map<string, SearchMatch>();
+  
+  if (parsedQuery.terms.length > 0) {
+    const termQuery = parsedQuery.terms.join(' ');
+    const processors = config.languages
+      .map((lang) => index.languageProcessors.get(lang))
+      .filter((p): p is LanguageProcessor => p !== undefined);
+
+    for (const processor of processors) {
+      const normalizedQuery = processor.normalize(termQuery);
+      
+      // Use existing search strategies for terms
+      findExactMatches(normalizedQuery, index, termMatches, processor.language);
+      findPrefixMatches(normalizedQuery, index, termMatches, processor.language);
+      findPhoneticMatches(normalizedQuery, processor, index, termMatches);
+      findNgramMatches(normalizedQuery, index, termMatches, processor.language, config.ngramSize);
+      
+      if (config.features.includes("missing-letters") || config.features.includes("extra-letters") || config.features.includes("transpositions")) {
+        findFuzzyMatches(normalizedQuery, index, termMatches, processor, config);
+      }
+    }
+  }
+
+  // Combine phrase and term matches
+  const combinedResults = new Map<string, SuggestionResult>();
+
+  // Add phrase matches
+  for (const [word, phraseData] of phraseMatches.entries()) {
+    const result: SuggestionResult = {
+      display: word,
+      baseWord: word,
+      isSynonym: false,
+      score: phraseData.score,
+    };
+    
+    // If word also matched terms, boost score even more
+    const termMatch = termMatches.get(word);
+    if (termMatch) {
+      result.score = Math.min(1.0, result.score * 1.2);
+    }
+    
+    combinedResults.set(word, result);
+  }
+
+  // Add term matches that didn't match phrases (with lower priority)
+  for (const [word, match] of termMatches.entries()) {
+    if (!combinedResults.has(word)) {
+      const result = createSuggestionResult(match, parsedQuery.terms.join(' '), threshold, index, options);
+      if (result) {
+        // Reduce score slightly since it didn't match the phrase
+        result.score *= 0.8;
+        combinedResults.set(word, result);
+      }
+    }
+  }
+
+  // Sort and limit results
+  const results = Array.from(combinedResults.values())
+    .filter(r => r.score >= threshold)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+
+  // Cache the results
+  if (index._cache) {
+    index._cache.set(parsedQuery.original, results, limit, options);
+  }
 
   return results;
 }

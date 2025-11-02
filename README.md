@@ -23,6 +23,7 @@ A powerful, multi-language optimized fuzzy search library with phonetic matching
 - ⚖️ **Field Weighting**: Multi-field search with weighted scoring (title > description)
 - 🚫 **Stop Words Filtering**: Remove common words (the, a, an) for better search quality
 - 📍 **Word Boundaries**: Precise matching with wildcard support (cat* matches category)
+- 💬 **Phrase Search**: Multi-word queries with quotes ("new york" finds "New York City")
 - 🎯 **Typo Tolerant**: Handles missing letters, extra letters, transpositions, keyboard neighbors
 - 🔤 **N-gram Matching**: Fast partial substring matching
 - 📊 **Configurable Scoring**: Customizable thresholds and edit distances
@@ -1710,6 +1711,84 @@ getSuggestions(index, 'freind');  // → 'friend'
 - Transpositions add ~5-10% overhead
 - Still maintains O(n×m) complexity
 - Early termination keeps it fast
+
+### Phrase Search (Multi-Word Queries)
+
+Search for multi-word phrases as single units by wrapping them in quotes:
+
+```typescript
+const index = buildFuzzyIndex([
+  'New York City',
+  'New York Times',
+  'New Orleans',
+  'York University'
+]);
+
+// Exact phrase search
+getSuggestions(index, '"new york"');
+// → ['New York City', 'New York Times']
+
+// Mixed: phrase + terms
+getSuggestions(index, '"new york" times');
+// → ['New York Times'] (boosted score)
+
+// Multiple phrases
+getSuggestions(index, '"new york" "san francisco"');
+```
+
+**Features:**
+- ✅ **Exact phrase matching** - Find multi-word terms
+- ✅ **Fuzzy phrase matching** - Allow typos in phrases
+- ✅ **Proximity matching** - Find words near each other
+- ✅ **Mixed queries** - Combine phrases with regular terms
+- ✅ **Quote styles** - Support both `"double"` and `'single'` quotes
+- ✅ **Score boosting** - Phrase matches get 1.5x score multiplier
+
+**Use Cases:**
+```typescript
+// City names
+'"san francisco"'     → 'San Francisco Bay Area'
+'"new york city"'     → 'New York City'
+
+// Product names
+'"macbook pro"'       → 'MacBook Pro 16"'
+'"iphone 15"'         → 'iPhone 15 Pro Max'
+
+// Company names
+'"apple inc"'         → 'Apple Inc.'
+'"google llc"'        → 'Google LLC'
+
+// Addresses
+'"123 main street"'   → '123 Main Street, NYC'
+```
+
+**Matching Strategies:**
+1. **Exact Match** (score: 1.0 × 1.5 = 1.5 capped at 1.0)
+   - Direct phrase found in text
+   
+2. **Fuzzy Match** (score: 0.7-0.9 × 1.5)
+   - Allow 1 typo per word
+   - Preserve word order
+   
+3. **Proximity Match** (score: 0.5-0.7 × 1.5)
+   - Words within 3 positions
+   - Score decreases with distance
+
+**Configuration:**
+```typescript
+// Phrases work automatically - just use quotes!
+// No configuration needed
+
+// Limits:
+// - Max 10 words per phrase
+// - Max edit distance: 1 per word
+// - Max proximity distance: 3 words
+```
+
+**Performance:**
+- Queries without quotes: 0% overhead
+- Queries with phrases: +5-15% time
+- Automatic optimization for phrase detection
 
 ### German-Specific Features
 

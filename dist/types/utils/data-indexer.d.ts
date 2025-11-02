@@ -14,9 +14,9 @@ export interface DataToIndexOptions {
     /** Size of each chunk in characters (default: 0 = no chunking) */
     chunkSize?: number;
     /** Split strategy for chunking (default: 'word') */
-    splitOn?: 'word' | 'sentence' | 'paragraph';
+    splitOn?: "word" | "sentence" | "paragraph";
     /** Data format (default: 'string') */
-    format?: 'string' | 'html' | 'json' | 'base64' | 'url';
+    format?: "string" | "html" | "json" | "base64" | "url";
     /** Remove numbers (default: false) */
     removeNumbers?: boolean;
     /** Case sensitive (default: false) */

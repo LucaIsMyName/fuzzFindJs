@@ -2,6 +2,7 @@
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 function dataToIndex(content, options = {}) {
   const {
+    //
     minLength = 2,
     splitWords = true,
     stopWords = false,

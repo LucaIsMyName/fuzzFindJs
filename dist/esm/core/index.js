@@ -8,6 +8,8 @@ import { removeAccents } from "../utils/accent-normalization.js";
 import { normalizeFieldWeights, extractFieldValues } from "./field-weighting.js";
 import { filterStopWords } from "../utils/stop-words.js";
 import { matchesWildcard, matchesWord } from "../utils/word-boundaries.js";
+import { parseQuery } from "../utils/phrase-parser.js";
+import { matchPhrase } from "./phrase-matching.js";
 function buildFuzzyIndex(words = [], options = {}) {
   const config = mergeConfig(options.config);
   validateConfig(config);
@@ -220,6 +222,10 @@ function getSuggestions(index, query, maxResults, options = {}) {
   const threshold = options.fuzzyThreshold || config.fuzzyThreshold;
   if (!query || query.trim().length < config.minQueryLength) {
     return [];
+  }
+  const parsedQuery = parseQuery(query);
+  if (parsedQuery.hasPhrases) {
+    return searchWithPhrases(index, parsedQuery, limit, threshold, options);
   }
   let processedQuery = query;
   if (config.enableStopWords && config.stopWords && config.stopWords.length > 0) {
@@ -489,6 +495,78 @@ function getSuggestionsInverted(index, query, limit, threshold, processors, opti
   }
   const matches = searchInvertedIndex(index.invertedIndex, index.documents, query, processors, index.config);
   const results = matches.map((match) => createSuggestionResult(match, query, threshold, index, options)).filter((result) => result !== null).sort((a, b) => b.score - a.score).slice(0, limit);
+  return results;
+}
+function searchWithPhrases(index, parsedQuery, limit, threshold, options) {
+  const config = index.config;
+  const useTranspositions = config.features.includes("transpositions");
+  const phraseOptions = {
+    exactMatch: false,
+    maxEditDistance: 1,
+    proximityBonus: 1.5,
+    maxProximityDistance: 3,
+    useTranspositions
+  };
+  const phraseMatches = /* @__PURE__ */ new Map();
+  for (const phrase of parsedQuery.phrases) {
+    for (const word of index.base) {
+      const match = matchPhrase(word, phrase, phraseOptions);
+      if (match.matched) {
+        const existing = phraseMatches.get(word);
+        const newScore = match.score * phraseOptions.proximityBonus;
+        if (existing) {
+          phraseMatches.set(word, {
+            score: Math.max(existing.score, newScore),
+            phraseCount: existing.phraseCount + 1
+          });
+        } else {
+          phraseMatches.set(word, { score: newScore, phraseCount: 1 });
+        }
+      }
+    }
+  }
+  let termMatches = /* @__PURE__ */ new Map();
+  if (parsedQuery.terms.length > 0) {
+    const termQuery = parsedQuery.terms.join(" ");
+    const processors = config.languages.map((lang) => index.languageProcessors.get(lang)).filter((p) => p !== void 0);
+    for (const processor of processors) {
+      const normalizedQuery = processor.normalize(termQuery);
+      findExactMatches(normalizedQuery, index, termMatches, processor.language);
+      findPrefixMatches(normalizedQuery, index, termMatches, processor.language);
+      findPhoneticMatches(normalizedQuery, processor, index, termMatches);
+      findNgramMatches(normalizedQuery, index, termMatches, processor.language, config.ngramSize);
+      if (config.features.includes("missing-letters") || config.features.includes("extra-letters") || config.features.includes("transpositions")) {
+        findFuzzyMatches(normalizedQuery, index, termMatches, processor, config);
+      }
+    }
+  }
+  const combinedResults = /* @__PURE__ */ new Map();
+  for (const [word, phraseData] of phraseMatches.entries()) {
+    const result = {
+      display: word,
+      baseWord: word,
+      isSynonym: false,
+      score: phraseData.score
+    };
+    const termMatch = termMatches.get(word);
+    if (termMatch) {
+      result.score = Math.min(1, result.score * 1.2);
+    }
+    combinedResults.set(word, result);
+  }
+  for (const [word, match] of termMatches.entries()) {
+    if (!combinedResults.has(word)) {
+      const result = createSuggestionResult(match, parsedQuery.terms.join(" "), threshold, index, options);
+      if (result) {
+        result.score *= 0.8;
+        combinedResults.set(word, result);
+      }
+    }
+  }
+  const results = Array.from(combinedResults.values()).filter((r) => r.score >= threshold).sort((a, b) => b.score - a.score).slice(0, limit);
+  if (index._cache) {
+    index._cache.set(parsedQuery.original, results, limit, options);
+  }
   return results;
 }
 export {
