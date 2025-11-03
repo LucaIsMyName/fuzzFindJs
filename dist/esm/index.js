@@ -3,6 +3,8 @@ import { batchSearch, removeFromIndex, updateIndex } from "./core/index.js";
 import { calculateHighlights, formatHighlightedHTML } from "./core/highlighting.js";
 import { LRUCache, SearchCache } from "./core/cache.js";
 import { deserializeIndex, getSerializedSize, loadIndexFromLocalStorage, saveIndexToLocalStorage, serializeIndex } from "./core/serialization.js";
+import { applyFilters } from "./core/filters.js";
+import { applySorting } from "./core/sorting.js";
 import { getAccentVariants, hasAccents, normalizeForComparison, removeAccents } from "./utils/accent-normalization.js";
 import { DEFAULT_STOP_WORDS, filterStopWords, getStopWordsForLanguages, isStopWord } from "./utils/stop-words.js";
 import { findWordBoundaryMatches, isWordBoundary, matchesAtWordBoundary, matchesWildcard, matchesWord } from "./utils/word-boundaries.js";
@@ -53,6 +55,8 @@ export {
   SetPool,
   SpanishProcessor,
   VERSION,
+  applyFilters,
+  applySorting,
   areStringsSimilar,
   batchSearch,
   buildCorpusStats,

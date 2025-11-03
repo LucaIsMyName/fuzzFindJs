@@ -34,6 +34,7 @@ A powerful, multi-language optimized fuzzy search library with phonetic matching
 - 🌍 **Language Detection**: Auto-detect languages from text with confidence scores
 - 🔄 **Incremental Updates**: Add/remove items 10-100x faster than rebuilding
 - 📊 **Configurable Scoring**: Customizable thresholds and edit distances
+- 🛒 **E-Commerce Ready**: Built-in filtering (price, category, etc.) and custom sorting
 - 🎨 **TypeScript First**: Full type safety with comprehensive type definitions
 - 📦 **Zero Dependencies**: Lightweight and self-contained
 
@@ -166,84 +167,289 @@ const results3 = germanSearch.search('krankenh');
 // [{ display: 'Krankenhaus', score: 0.95, ... }]
 ```
 
-## 📖 API Documentation
+## API Documentation
 
 ### Core Functions
 
 #### `buildFuzzyIndex(words, options?)`
 
-Builds a searchable index from an array of words.
+Creates a searchable index from strings or objects. Supports multi-field indexing for complex data structures.
+
+**Signature:**
+```typescript
+function buildFuzzyIndex(
+  words: (string | object)[],
+  options?: BuildIndexOptions
+): FuzzyIndex
+```
 
 **Parameters:**
-- `words: string[]` - Array of words to index
-- `options?: BuildIndexOptions` - Configuration options
+- `words` - Array of strings or objects to index
+- `options.config` - Fuzzy search configuration (languages, features, performance)
+- `options.fields` - Field names to index (required for objects)
+- `options.fieldWeights` - Weight multipliers for each field
+- `options.languageProcessors` - Custom language processors
+- `options.onProgress` - Progress callback `(processed, total) => void`
+- `options.useInvertedIndex` - Force inverted index (auto-enabled for 10k+ items)
 
-**Returns:** `FuzzyIndex` - The built search index
+**Returns:** `FuzzyIndex` object
 
-**Example:**
+**Example 1: Simple string array**
 ```typescript
 import { buildFuzzyIndex } from 'fuzzyfindjs';
 
-const index = buildFuzzyIndex(['Apple', 'Banana', 'Cherry'], {
+const cities = ['Berlin', 'München', 'Hamburg', 'Frankfurt'];
+const index = buildFuzzyIndex(cities, {
   config: {
-    languages: ['english'],
-    performance: 'fast',
-    features: ['phonetic', 'partial-words']
-  },
-  onProgress: (processed, total) => {
-    console.log(`Indexed ${processed}/${total} words`);
+    languages: ['german'],
+    performance: 'balanced'
   }
 });
 ```
 
-#### `getSuggestions(index, query, maxResults?, options?)`
-
-Search the index for fuzzy matches.
-
-**Parameters:**
-- `index: FuzzyIndex` - The search index
-- `query: string` - Search query
-- `maxResults?: number` - Maximum results to return (default: from config)
-- `options?: SearchOptions` - Search-specific options
-
-**Returns:** `SuggestionResult[]` - Ranked search results
-
-**Example:**
+**Example 2: Multi-field objects (e-commerce)**
 ```typescript
-import { getSuggestions } from 'fuzzyfindjs';
+const products = [
+  { name: 'iPhone 15', brand: 'Apple', price: 999, category: 'Phones' },
+  { name: 'Galaxy S24', brand: 'Samsung', price: 899, category: 'Phones' },
+  { name: 'MacBook Pro', brand: 'Apple', price: 1999, category: 'Laptops' }
+];
 
-const results = getSuggestions(index, 'aple', 5, {
-  fuzzyThreshold: 0.7,
-  languages: ['english'],
-  debug: true
-});
-
-results.forEach(result => {
-  console.log(`${result.display} (score: ${result.score})`);
+const index = buildFuzzyIndex(products, {
+  fields: ['name', 'brand', 'category', 'price'],
+  fieldWeights: {
+    name: 2.0,    // Name matches weighted 2x
+    brand: 1.5,   // Brand matches weighted 1.5x
+    category: 1.0 // Category normal weight
+  }
 });
 ```
 
-#### `createFuzzySearch(dictionary, options?)`
+**Example 3: Large dataset with progress**
+```typescript
+const largeDataset = [...]; // 100k items
 
-Convenience function that combines index building and searching.
+const index = buildFuzzyIndex(largeDataset, {
+  config: { performance: 'fast' },
+  onProgress: (processed, total) => {
+    console.log(`Progress: ${(processed/total*100).toFixed(1)}%`);
+  }
+});
+```
+
+---
+
+#### `getSuggestions(index, query, maxResults?, options?)`
+
+Searches the index and returns ranked results. Supports filtering, sorting, and advanced search options.
+
+**Signature:**
+```typescript
+function getSuggestions(
+  index: FuzzyIndex,
+  query: string,
+  maxResults?: number,
+  options?: SearchOptions
+): SuggestionResult[]
+```
 
 **Parameters:**
-- `dictionary: string[]` - Words to search
-- `options?: object` - Quick configuration
+- `index` - The fuzzy index from `buildFuzzyIndex()`
+- `query` - Search query string
+- `maxResults` - Maximum results to return (default: from config)
+- `options.fuzzyThreshold` - Override threshold (0-1, default: 0.75)
+- `options.languages` - Filter by specific languages
+- `options.matchTypes` - Filter by match types ('exact', 'fuzzy', 'phonetic', etc.)
+- `options.debug` - Include debug information
+- `options.includeHighlights` - Include match position highlights
+- `options.enableFQL` - Enable Fuzzy Query Language (AND/OR/NOT operators)
+- `options.filters` - E-commerce filters (range, term, boolean)
+- `options.sort` - Custom sorting configuration
 
-**Returns:** Object with `search()` method and `index`
+**Returns:** Array of `SuggestionResult` objects
+
+**Example 1: Basic search**
+```typescript
+import { getSuggestions } from 'fuzzyfindjs';
+
+const results = getSuggestions(index, 'berln', 5);
+// Returns: [{ display: 'Berlin', score: 0.92, ... }]
+
+results.forEach(r => {
+  console.log(`${r.display} (${(r.score * 100).toFixed(0)}% match)`);
+});
+```
+
+**Example 2: Search with filters and sorting**
+```typescript
+const results = getSuggestions(index, 'phone', 10, {
+  filters: {
+    ranges: [{ field: 'price', min: 500, max: 1500 }],
+    terms: [{ field: 'brand', values: ['Apple', 'Samsung'] }],
+    booleans: [{ field: 'inStock', value: true }]
+  },
+  sort: {
+    primary: { field: 'price', order: 'asc' },
+    secondary: { field: 'rating', order: 'desc' }
+  }
+});
+```
+
+**Example 3: Debug mode**
+```typescript
+const results = getSuggestions(index, 'hospitl', 5, {
+  debug: true,
+  includeHighlights: true
+});
+
+results.forEach(r => {
+  console.log(r.display);
+  console.log('Match type:', r._debug_matchType);
+  console.log('Highlights:', r.highlights);
+});
+```
+
+---
+
+#### `batchSearch(index, queries, maxResults?)`
+
+Searches multiple queries at once with automatic deduplication.
+
+**Signature:**
+```typescript
+function batchSearch(
+  index: FuzzyIndex,
+  queries: string[],
+  maxResults?: number
+): Map<string, SuggestionResult[]>
+```
+
+**Parameters:**
+- `index` - The fuzzy index
+- `queries` - Array of search queries
+- `maxResults` - Maximum results per query
+
+**Returns:** Map of query → results
+
+**Example:**
+```typescript
+import { batchSearch } from 'fuzzyfindjs';
+
+const queries = ['berln', 'munchen', 'hambur'];
+const results = batchSearch(index, queries, 3);
+
+results.forEach((suggestions, query) => {
+  console.log(`Query: "${query}"`);
+  suggestions.forEach(s => console.log(`  - ${s.display}`));
+});
+```
+
+---
+
+#### `updateIndex(index, newWords)`
+
+Incrementally adds new items to an existing index. 10-100x faster than rebuilding.
+
+**Signature:**
+```typescript
+function updateIndex(
+  index: FuzzyIndex,
+  newWords: (string | object)[]
+): FuzzyIndex
+```
+
+**Parameters:**
+- `index` - Existing index to update
+- `newWords` - New items to add
+
+**Returns:** Updated index (mutates original)
+
+**Example:**
+```typescript
+import { updateIndex } from 'fuzzyfindjs';
+
+// Initial index
+const index = buildFuzzyIndex(['Apple', 'Banana']);
+
+// Add new items later
+updateIndex(index, ['Cherry', 'Date', 'Elderberry']);
+
+// Index now contains all 5 items
+const results = getSuggestions(index, 'cherry');
+```
+
+---
+
+#### `removeFromIndex(index, wordsToRemove)`
+
+Removes items from an existing index.
+
+**Signature:**
+```typescript
+function removeFromIndex(
+  index: FuzzyIndex,
+  wordsToRemove: string[]
+): FuzzyIndex
+```
+
+**Parameters:**
+- `index` - Existing index
+- `wordsToRemove` - Items to remove (exact match)
+
+**Returns:** Updated index (mutates original)
+
+**Example:**
+```typescript
+import { removeFromIndex } from 'fuzzyfindjs';
+
+const index = buildFuzzyIndex(['Apple', 'Banana', 'Cherry']);
+
+// Remove items
+removeFromIndex(index, ['Banana']);
+
+// Index now only contains Apple and Cherry
+const results = getSuggestions(index, 'ban'); // Returns empty
+```
+
+---
+
+#### `createFuzzySearch(dictionary, options?)`
+
+Convenience wrapper that combines index building and searching into a single object.
+
+**Signature:**
+```typescript
+function createFuzzySearch(
+  dictionary: string[],
+  options?: {
+    languages?: string[];
+    performance?: 'fast' | 'balanced' | 'comprehensive';
+    maxResults?: number;
+  }
+): { search: (query: string, maxResults?: number) => SuggestionResult[]; index: FuzzyIndex }
+```
+
+**Parameters:**
+- `dictionary` - Array of strings to search
+- `options` - Quick configuration
+
+**Returns:** Object with `search()` method and `index` property
 
 **Example:**
 ```typescript
 import { createFuzzySearch } from 'fuzzyfindjs';
 
-const fuzzy = createFuzzySearch(['Hello', 'World'], {
-  languages: ['english'],
-  performance: 'comprehensive',
-  maxResults: 10
+const fuzzy = createFuzzySearch(['Berlin', 'München', 'Hamburg'], {
+  languages: ['german'],
+  performance: 'fast',
+  maxResults: 5
 });
 
-const results = fuzzy.search('helo');
+// Search directly
+const results = fuzzy.search('berln');
+
+// Access underlying index
+console.log(fuzzy.index.base.length); // 3
 ```
 
 ### Configuration
@@ -349,6 +555,471 @@ interface SearchOptions {
   matchTypes?: MatchType[];
   debug?: boolean;
 }
+```
+
+### Utility Functions
+
+#### `serializeIndex(index)`
+
+Converts index to JSON string for storage.
+
+```typescript
+import { serializeIndex } from 'fuzzyfindjs';
+
+const index = buildFuzzyIndex(['Apple', 'Banana']);
+const json = serializeIndex(index);
+localStorage.setItem('search-index', json);
+```
+
+#### `deserializeIndex(json)`
+
+Reconstructs index from JSON string.
+
+```typescript
+import { deserializeIndex } from 'fuzzyfindjs';
+
+const json = localStorage.getItem('search-index');
+const index = deserializeIndex(json);
+const results = getSuggestions(index, 'aple');
+```
+
+#### `saveIndexToLocalStorage(index, key)`
+
+Saves index to browser localStorage.
+
+```typescript
+import { saveIndexToLocalStorage } from 'fuzzyfindjs';
+
+saveIndexToLocalStorage(index, 'my-search-index');
+```
+
+#### `loadIndexFromLocalStorage(key)`
+
+Loads index from browser localStorage.
+
+```typescript
+import { loadIndexFromLocalStorage } from 'fuzzyfindjs';
+
+const index = loadIndexFromLocalStorage('my-search-index');
+if (index) {
+  const results = getSuggestions(index, 'query');
+}
+```
+
+#### `getSerializedSize(index)`
+
+Returns size of serialized index in bytes.
+
+```typescript
+import { getSerializedSize } from 'fuzzyfindjs';
+
+const sizeBytes = getSerializedSize(index);
+console.log(`Index size: ${(sizeBytes / 1024).toFixed(2)} KB`);
+```
+
+#### `applyFilters(results, filters)`
+
+Applies filters to search results.
+
+```typescript
+import { applyFilters } from 'fuzzyfindjs';
+
+const allResults = getSuggestions(index, 'phone');
+const filtered = applyFilters(allResults, {
+  ranges: [{ field: 'price', min: 500, max: 1000 }],
+  terms: [{ field: 'brand', values: ['Apple', 'Samsung'] }],
+  booleans: [{ field: 'inStock', value: true }]
+});
+```
+
+#### `applySorting(results, sortConfig)`
+
+Applies custom sorting to results.
+
+```typescript
+import { applySorting } from 'fuzzyfindjs';
+
+const results = getSuggestions(index, 'laptop');
+const sorted = applySorting(results, {
+  primary: { field: 'price', order: 'asc' },
+  secondary: { field: 'rating', order: 'desc' },
+  keepRelevance: true
+});
+```
+#### `calculateHighlights(match, query, text)`
+
+Calculates character positions where query matches text.
+
+```typescript
+import { calculateHighlights } from 'fuzzyfindjs';
+
+const highlights = calculateHighlights(match, 'berln', 'Berlin');
+// Returns: [{ start: 0, end: 3 }, { start: 4, end: 5 }]
+```
+
+#### `formatHighlightedHTML(text, highlights)`
+
+Wraps highlighted portions in HTML tags.
+
+```typescript
+import { formatHighlightedHTML } from 'fuzzyfindjs';
+
+const html = formatHighlightedHTML('Berlin', highlights);
+// Returns: '<mark>Ber</mark>li<mark>n</mark>'
+```
+#### `removeAccents(text)`
+
+Removes accents from text.
+
+```typescript
+import { removeAccents } from 'fuzzyfindjs';
+
+removeAccents('café'); // 'cafe'
+removeAccents('naïve'); // 'naive'
+removeAccents('Müller'); // 'Muller'
+```
+
+#### `hasAccents(text)`
+
+Checks if text contains accents.
+
+```typescript
+import { hasAccents } from 'fuzzyfindjs';
+
+hasAccents('café'); // true
+hasAccents('cafe'); // false
+```
+
+#### `normalizeForComparison(text)`
+
+Normalizes text for comparison (lowercase + remove accents).
+
+```typescript
+import { normalizeForComparison } from 'fuzzyfindjs';
+
+normalizeForComparison('Café'); // 'cafe'
+normalizeForComparison('NAÏVE'); // 'naive'
+```
+
+#### `getAccentVariants(text)`
+
+Generates all accent variants of text.
+
+```typescript
+import { getAccentVariants } from 'fuzzyfindjs';
+
+getAccentVariants('cafe');
+// Returns: ['cafe', 'café', 'cafè', 'cafê', ...]
+```
+
+#### `filterStopWords(text, stopWords)`
+
+Removes stop words from text.
+
+```typescript
+import { filterStopWords } from 'fuzzyfindjs';
+
+filterStopWords('the quick brown fox', ['the', 'a']);
+// Returns: 'quick brown fox'
+```
+
+#### `isStopWord(word, stopWords)`
+
+Checks if word is a stop word.
+
+```typescript
+import { isStopWord } from 'fuzzyfindjs';
+
+isStopWord('the', ['the', 'a', 'an']); // true
+isStopWord('fox', ['the', 'a', 'an']); // false
+```
+
+#### `getStopWordsForLanguages(languages)`
+
+Gets stop words for specified languages.
+
+```typescript
+import { getStopWordsForLanguages } from 'fuzzyfindjs';
+
+const stopWords = getStopWordsForLanguages(['english', 'german']);
+// Returns: ['the', 'a', 'an', 'der', 'die', 'das', ...]
+```
+
+#### `DEFAULT_STOP_WORDS`
+
+Pre-defined stop words for common languages.
+
+```typescript
+import { DEFAULT_STOP_WORDS } from 'fuzzyfindjs';
+
+console.log(DEFAULT_STOP_WORDS.english);
+// ['the', 'a', 'an', 'is', 'at', 'on', ...]
+```
+
+#### `isWordBoundary(char)`
+
+Checks if character is a word boundary.
+
+```typescript
+import { isWordBoundary } from 'fuzzyfindjs';
+
+isWordBoundary(' '); // true
+isWordBoundary('-'); // true
+isWordBoundary('a'); // false
+```
+
+#### `matchesAtWordBoundary(text, query)`
+
+Checks if query matches at word boundary.
+
+```typescript
+import { matchesAtWordBoundary } from 'fuzzyfindjs';
+
+matchesAtWordBoundary('hello world', 'world'); // true
+matchesAtWordBoundary('hello world', 'orld'); // false
+```
+
+#### `findWordBoundaryMatches(text, query)`
+
+Finds all word boundary matches.
+
+```typescript
+import { findWordBoundaryMatches } from 'fuzzyfindjs';
+
+findWordBoundaryMatches('hello world hello', 'hello');
+// Returns: [{ start: 0, end: 5 }, { start: 12, end: 17 }]
+```
+
+#### `matchesWord(text, word)`
+
+Checks if text contains exact word.
+
+```typescript
+import { matchesWord } from 'fuzzyfindjs';
+
+matchesWord('hello world', 'hello'); // true
+matchesWord('hello world', 'hel'); // false
+```
+
+#### `matchesWildcard(text, pattern)`
+
+Matches text against wildcard pattern.
+
+```typescript
+import { matchesWildcard } from 'fuzzyfindjs';
+
+matchesWildcard('application', 'app*'); // true
+matchesWildcard('category', 'cat*'); // true
+matchesWildcard('dog', 'cat*'); // false
+```
+
+#### `dataToIndex(data, options)`
+
+Extracts searchable text from structured data.
+
+```typescript
+import { dataToIndex } from 'fuzzyfindjs';
+
+const html = '<div><h1>Title</h1><p>Content</p></div>';
+const words = dataToIndex(html, { type: 'html' });
+// Returns: ['Title', 'Content']
+
+const json = { name: 'John', email: 'john@example.com' };
+const words2 = dataToIndex(json, { type: 'json' });
+// Returns: ['John', 'john@example.com']
+```
+
+#### `dataToIndexAsync(data, options)`
+
+Async version of dataToIndex for large datasets.
+
+```typescript
+import { dataToIndexAsync } from 'fuzzyfindjs';
+
+const largeHtml = '...'; // Large HTML document
+const words = await dataToIndexAsync(largeHtml, {
+  type: 'html',
+  chunkSize: 1000
+});
+```
+#### `parseQuery(query)`
+
+Parses query into terms and phrases.
+
+```typescript
+import { parseQuery } from 'fuzzyfindjs';
+
+const parsed = parseQuery('hello "new york" world');
+// Returns: {
+//   terms: ['hello', 'world'],
+//   phrases: ['new york'],
+//   hasPhrases: true
+// }
+```
+
+#### `hasPhraseSyntax(query)`
+
+Checks if query contains phrase syntax (quotes).
+
+```typescript
+import { hasPhraseSyntax } from 'fuzzyfindjs';
+
+hasPhraseSyntax('"new york"'); // true
+hasPhraseSyntax('new york'); // false
+```
+
+#### `normalizePhrase(phrase)`
+
+Normalizes phrase for matching.
+
+```typescript
+import { normalizePhrase } from 'fuzzyfindjs';
+
+normalizePhrase('"New York"'); // 'new york'
+```
+
+#### `splitPhraseWords(phrase)`
+
+Splits phrase into individual words.
+
+```typescript
+import { splitPhraseWords } from 'fuzzyfindjs';
+
+splitPhraseWords('new york city'); // ['new', 'york', 'city']
+```
+#### `detectLanguages(text)`
+
+Detects languages in text.
+
+```typescript
+import { detectLanguages } from 'fuzzyfindjs';
+
+const languages = detectLanguages('Hello Krankenhaus café');
+// Returns: ['english', 'german', 'french']
+```
+
+#### `detectLanguagesWithConfidence(text)`
+
+Detects languages with confidence scores.
+
+```typescript
+import { detectLanguagesWithConfidence } from 'fuzzyfindjs';
+
+const results = detectLanguagesWithConfidence('Hello world');
+// Returns: [{ language: 'english', confidence: 0.95 }]
+```
+
+#### `sampleTextForDetection(words, sampleSize)`
+
+Samples text for language detection.
+
+```typescript
+import { sampleTextForDetection } from 'fuzzyfindjs';
+
+const sample = sampleTextForDetection(largeArray, 100);
+// Returns first 100 items concatenated
+```
+
+#### `isValidLanguage(language)`
+
+Checks if language is supported.
+
+```typescript
+import { isValidLanguage } from 'fuzzyfindjs';
+
+isValidLanguage('english'); // true
+isValidLanguage('klingon'); // false
+```
+
+#### `normalizeLanguageCode(code)`
+
+Normalizes language code.
+
+```typescript
+import { normalizeLanguageCode } from 'fuzzyfindjs';
+
+normalizeLanguageCode('en'); // 'english'
+normalizeLanguageCode('de'); // 'german'
+```
+
+#### `SearchCache`
+
+LRU cache for search results.
+
+```typescript
+import { SearchCache } from 'fuzzyfindjs';
+
+const cache = new SearchCache(100); // Max 100 entries
+
+// Manual caching
+cache.set('query', results, 10);
+const cached = cache.get('query', 10);
+
+// Stats
+const stats = cache.getStats();
+console.log(`Hit rate: ${(stats.hitRate * 100).toFixed(1)}%`);
+
+// Clear
+cache.clear();
+```
+
+#### `LRUCache`
+
+Generic LRU cache.
+
+```typescript
+import { LRUCache } from 'fuzzyfindjs';
+
+const cache = new LRUCache<string, any>(50);
+
+cache.set('key', { data: 'value' });
+const value = cache.get('key');
+
+console.log(cache.size); // 1
+cache.clear();
+```
+
+#### `DEFAULT_CONFIG`
+
+Default configuration object.
+
+```typescript
+import { DEFAULT_CONFIG } from 'fuzzyfindjs';
+
+console.log(DEFAULT_CONFIG.languages); // ['english']
+console.log(DEFAULT_CONFIG.performance); // 'balanced'
+console.log(DEFAULT_CONFIG.fuzzyThreshold); // 0.75
+```
+
+#### `PERFORMANCE_CONFIGS`
+
+Pre-defined performance configurations.
+
+```typescript
+import { PERFORMANCE_CONFIGS } from 'fuzzyfindjs';
+
+// Fast mode
+const fastConfig = PERFORMANCE_CONFIGS.fast;
+
+// Balanced mode
+const balancedConfig = PERFORMANCE_CONFIGS.balanced;
+
+// Comprehensive mode
+const comprehensiveConfig = PERFORMANCE_CONFIGS.comprehensive;
+```
+
+#### `mergeConfig(userConfig)`
+
+Merges user config with defaults.
+
+```typescript
+import { mergeConfig } from 'fuzzyfindjs';
+
+const config = mergeConfig({
+  languages: ['german'],
+  maxResults: 20
+});
+// Returns complete config with defaults filled in
 ```
 
 ## 💡 Usage Examples
@@ -1406,7 +2077,141 @@ const results = getSuggestions(index, 'typescript');
 // "TypeScript Guide" ranks first (title match with 3x weight)
 ```
 
-### 12. Stop Words Filtering
+### 12. E-Commerce: Filtering & Sorting
+
+Built-in support for e-commerce use cases with filtering and custom sorting:
+
+```typescript
+import { buildFuzzyIndex, getSuggestions } from 'fuzzyfindjs';
+
+// Index products with multiple fields
+const products = [
+  { name: "Nike Air Max", brand: "Nike", price: 120, rating: 4.5, inStock: true },
+  { name: "Adidas Ultraboost", brand: "Adidas", price: 180, rating: 4.8, inStock: true },
+  { name: "Nike React", brand: "Nike", price: 90, rating: 4.2, inStock: false },
+  { name: "Puma RS-X", brand: "Puma", price: 110, rating: 4.0, inStock: true },
+];
+
+const index = buildFuzzyIndex(products, {
+  fields: ["name", "brand", "price", "rating", "inStock"],
+});
+
+// Search with filters and sorting
+const results = getSuggestions(index, "nike", 10, {
+  filters: {
+    // Range filters (numeric fields)
+    ranges: [
+      { field: "price", min: 80, max: 150 },
+      { field: "rating", min: 4.0 }
+    ],
+    // Term filters (categorical fields)
+    terms: [
+      { field: "brand", values: ["Nike", "Adidas"] }
+    ],
+    // Boolean filters
+    booleans: [
+      { field: "inStock", value: true }
+    ]
+  },
+  sort: {
+    // Primary sort: price ascending
+    primary: { field: "price", order: "asc" },
+    // Secondary sort: rating descending (tie-breaker)
+    secondary: { field: "rating", order: "desc" },
+    // Keep relevance as final tie-breaker (default: true)
+    keepRelevance: true
+  }
+});
+
+// Results are filtered and sorted
+results.forEach(result => {
+  console.log(result.display);           // "Nike Air Max"
+  console.log(result.fields?.price);     // 120
+  console.log(result.fields?.rating);    // 4.5
+  console.log(result.fields?.inStock);   // true
+});
+```
+
+**Filter Types:**
+
+```typescript
+// Range Filter - Numeric comparisons
+interface RangeFilter {
+  field: string;
+  min?: number;  // Minimum value (inclusive)
+  max?: number;  // Maximum value (inclusive)
+}
+
+// Term Filter - Categorical matching
+interface TermFilter {
+  field: string;
+  values: any[];           // Values to match
+  operator?: "AND" | "OR"; // Default: "OR"
+}
+
+// Boolean Filter - True/false matching
+interface BooleanFilter {
+  field: string;
+  value: boolean;
+}
+```
+
+**Sorting Options:**
+
+```typescript
+interface SortConfig {
+  primary: SortOption;      // Primary sort field
+  secondary?: SortOption;   // Tie-breaker
+  keepRelevance?: boolean;  // Use relevance as final tie-breaker (default: true)
+}
+
+interface SortOption {
+  field: string;
+  order: "asc" | "desc";
+  type?: "number" | "string" | "date";  // Auto-detected if not specified
+}
+```
+
+**Real-World E-Commerce Example:**
+
+```typescript
+// Product catalog search
+const catalog = [
+  { name: "iPhone 15 Pro", category: "Phones", price: 999, rating: 4.8, inStock: true },
+  { name: "Samsung Galaxy S24", category: "Phones", price: 899, rating: 4.7, inStock: true },
+  { name: "iPad Air", category: "Tablets", price: 599, rating: 4.6, inStock: false },
+  { name: "MacBook Pro", category: "Laptops", price: 1999, rating: 4.9, inStock: true },
+];
+
+const index = buildFuzzyIndex(catalog, {
+  fields: ["name", "category", "price", "rating", "inStock"],
+});
+
+// User searches "phone" with filters
+const results = getSuggestions(index, "phone", 10, {
+  filters: {
+    ranges: [{ field: "price", max: 1000 }],
+    terms: [{ field: "category", values: ["Phones"] }],
+    booleans: [{ field: "inStock", value: true }]
+  },
+  sort: {
+    primary: { field: "price", order: "asc" }
+  }
+});
+
+// Returns: Samsung Galaxy S24 ($899), iPhone 15 Pro ($999)
+// Filtered by: price ≤ $1000, category = Phones, inStock = true
+// Sorted by: price ascending
+```
+
+**Use Cases:**
+- 🛒 **Product Search** - Filter by price, category, brand, availability
+- 📱 **Marketplace** - Sort by price, rating, popularity
+- 🏨 **Booking Sites** - Filter by price range, ratings, availability
+- 🍔 **Food Delivery** - Filter by cuisine, price, rating, delivery time
+- 🏠 **Real Estate** - Filter by price, bedrooms, location
+
+### 13. Stop Words Filtering
 
 Filter common words that add noise to search results:
 
@@ -2558,3 +3363,4 @@ All major functions include comprehensive JSDoc:
 
 - [ ] Add (optional) dictionary imports for english, german ,spanish, france, ... as json files with the eg 500 most common expressions to be used as dictionary
   - [ ] implemenent a native way to use these dictionary ON top of your own OR instead
+- [ ] 

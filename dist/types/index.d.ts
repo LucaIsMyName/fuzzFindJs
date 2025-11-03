@@ -14,6 +14,10 @@ export { buildFuzzyIndex, getSuggestions, batchSearch, updateIndex, removeFromIn
 export { calculateHighlights, formatHighlightedHTML, } from "./core/highlighting.js";
 export { SearchCache, LRUCache, } from "./core/cache.js";
 export { serializeIndex, deserializeIndex, saveIndexToLocalStorage, loadIndexFromLocalStorage, getSerializedSize, } from "./core/serialization.js";
+export { applyFilters } from "./core/filters.js";
+export type { RangeFilter, TermFilter, BooleanFilter, FilterOptions } from "./core/filters.js";
+export { applySorting } from "./core/sorting.js";
+export type { SortOption, SortConfig } from "./core/sorting.js";
 export { removeAccents, hasAccents, normalizeForComparison, getAccentVariants, } from "./utils/accent-normalization.js";
 export { filterStopWords, getStopWordsForLanguages, isStopWord, DEFAULT_STOP_WORDS, } from "./utils/stop-words.js";
 export { isWordBoundary, matchesAtWordBoundary, findWordBoundaryMatches, matchesWord, matchesWildcard, } from "./utils/word-boundaries.js";

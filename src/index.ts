@@ -51,6 +51,14 @@ export {
   getSerializedSize,
 } from "./core/serialization.js";
 
+// E-Commerce: Filtering
+export { applyFilters } from "./core/filters.js";
+export type { RangeFilter, TermFilter, BooleanFilter, FilterOptions } from "./core/filters.js";
+
+// E-Commerce: Sorting
+export { applySorting } from "./core/sorting.js";
+export type { SortOption, SortConfig } from "./core/sorting.js";
+
 // Accent normalization utilities
 export {
   //

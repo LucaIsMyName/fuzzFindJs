@@ -14,6 +14,8 @@ const phraseParser = require("../utils/phrase-parser.cjs");
 const phraseMatching = require("./phrase-matching.cjs");
 const languageDetection = require("../utils/language-detection.cjs");
 const index$1 = require("../fql/index.cjs");
+const filters = require("./filters.cjs");
+const sorting = require("./sorting.cjs");
 function buildFuzzyIndex(words = [], options = {}) {
   const userSpecifiedLanguages = options.config?.languages;
   const shouldAutoDetect = !userSpecifiedLanguages || userSpecifiedLanguages.includes("auto");
@@ -275,7 +277,16 @@ function getSuggestions(index2, query, maxResults, options = {}) {
       findFuzzyMatches(normalizedQuery, index2, matches, processor, config2);
     }
   }
-  const results = Array.from(matches.values()).map((match) => createSuggestionResult(match, processedQuery, threshold, index2, options)).filter((result) => result !== null).sort((a, b) => b.score - a.score).slice(0, limit);
+  let results = Array.from(matches.values()).map((match) => createSuggestionResult(match, processedQuery, threshold, index2, options)).filter((result) => result !== null);
+  if (options.filters) {
+    results = filters.applyFilters(results, options.filters);
+  }
+  if (options.sort) {
+    results = sorting.applySorting(results, options.sort);
+  } else {
+    results = results.sort((a, b) => b.score - a.score);
+  }
+  results = results.slice(0, limit);
   if (index2._cache) {
     index2._cache.set(processedQuery, results, limit, options);
   }
@@ -517,7 +528,16 @@ function getSuggestionsInverted(index2, query, limit, threshold, processors, opt
     const queryTerms = query.toLowerCase().split(/\s+/).filter((t) => t.length > 0);
     matches = invertedIndex.calculateBM25Scores(matches, queryTerms, index2.invertedIndex, index2.documents, index2.config);
   }
-  const results = matches.map((match) => createSuggestionResult(match, query, threshold, index2, options)).filter((result) => result !== null).sort((a, b) => b.score - a.score).slice(0, limit);
+  let results = matches.map((match) => createSuggestionResult(match, query, threshold, index2, options)).filter((result) => result !== null);
+  if (options?.filters) {
+    results = filters.applyFilters(results, options.filters);
+  }
+  if (options?.sort) {
+    results = sorting.applySorting(results, options.sort);
+  } else {
+    results = results.sort((a, b) => b.score - a.score);
+  }
+  results = results.slice(0, limit);
   return results;
 }
 function searchWithPhrases(index2, parsedQuery, limit, threshold, options) {

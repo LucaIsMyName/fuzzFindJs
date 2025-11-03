@@ -45,6 +45,8 @@ import { parseQuery } from "../utils/phrase-parser.js";
 import { matchPhrase } from "./phrase-matching.js";
 import { detectLanguages, sampleTextForDetection } from "../utils/language-detection.js";
 import { isFQLQuery, executeFQLQuery } from "../fql/index.js";
+import { applyFilters } from "./filters.js";
+import { applySorting } from "./sorting.js";
 
 /**
  * Builds a fuzzy search index from an array of words or objects.
@@ -562,11 +564,25 @@ export function getSuggestions(index: FuzzyIndex, query: string, maxResults?: nu
   }
 
   // Convert matches to results and rank them
-  const results = Array.from(matches.values())
+  let results = Array.from(matches.values())
     .map((match) => createSuggestionResult(match, processedQuery, threshold, index, options))
-    .filter((result): result is SuggestionResult => result !== null)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit);
+    .filter((result): result is SuggestionResult => result !== null);
+
+  // Apply filters if provided
+  if (options.filters) {
+    results = applyFilters(results, options.filters);
+  }
+
+  // Apply custom sorting if provided
+  if (options.sort) {
+    results = applySorting(results, options.sort);
+  } else {
+    // Default: sort by relevance
+    results = results.sort((a, b) => b.score - a.score);
+  }
+
+  // Limit results
+  results = results.slice(0, limit);
 
   // Cache the results
   if (index._cache) {
@@ -913,11 +929,25 @@ function getSuggestionsInverted(
   }
 
   // Convert to suggestion results (same as classic approach)
-  const results = matches
+  let results = matches
     .map((match) => createSuggestionResult(match, query, threshold, index, options))
-    .filter((result): result is SuggestionResult => result !== null)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit);
+    .filter((result): result is SuggestionResult => result !== null);
+
+  // Apply filters if provided
+  if (options?.filters) {
+    results = applyFilters(results, options.filters);
+  }
+
+  // Apply custom sorting if provided
+  if (options?.sort) {
+    results = applySorting(results, options.sort);
+  } else {
+    // Default: sort by relevance
+    results = results.sort((a, b) => b.score - a.score);
+  }
+
+  // Limit results
+  results = results.slice(0, limit);
 
   return results;
 }

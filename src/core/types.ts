@@ -216,6 +216,10 @@ export interface SearchOptions {
     /** Timeout for query execution in ms */
     timeout?: number;
   };
+  /** E-Commerce: Filter options */
+  filters?: import("./filters.js").FilterOptions;
+  /** E-Commerce: Custom sorting */
+  sort?: import("./sorting.js").SortConfig;
 }
 
 export interface DebugInfo {
