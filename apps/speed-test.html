@@ -251,6 +251,32 @@
       </div>
     </div>
 
+    <!-- Sample Query Results -->
+    <div id="sampleResults" class="bg-white border border-gray-200 rounded-lg p-6 hidden">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">📋 Sample Query Results</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- FuzzyFindJS Results -->
+        <div>
+          <h4 class="text-md font-semibold text-blue-600 mb-3 flex items-center">
+            <span class="mr-2">⚡</span> FuzzyFindJS
+          </h4>
+          <div id="fuzzyQueryResults" class="space-y-2 text-sm">
+            <!-- Results will be inserted here -->
+          </div>
+        </div>
+        
+        <!-- Fuse.js Results -->
+        <div>
+          <h4 class="text-md font-semibold text-orange-600 mb-3 flex items-center">
+            <span class="mr-2">🔍</span> Fuse.js
+          </h4>
+          <div id="fuseQueryResults" class="space-y-2 text-sm">
+            <!-- Results will be inserted here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- About the Test -->
     <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
       <h3 class="text-lg font-semibold text-blue-900 mb-3">About This Comparison</h3>
@@ -428,12 +454,22 @@
         
         updateProgress(35, 'Running FuzzyFindJS queries...');
         const fuzzyQueryTimes = [];
+        const fuzzySampleResults = [];
         
         for (let i = 0; i < queries.length; i++) {
           const queryStart = performance.now();
           const results = FuzzyFindJS.getSuggestions(fuzzyIndex, queries[i], 10);
           const queryTime = performance.now() - queryStart;
           fuzzyQueryTimes.push(queryTime);
+          
+          // Capture first 20 results for display
+          if (i < 20) {
+            fuzzySampleResults.push({
+              query: queries[i],
+              results: results.slice(0, 3), // Top 3 results
+              time: queryTime
+            });
+          }
           
           if (i % 10 === 0) {
             updateProgress(35 + (i / queries.length) * 15, `FuzzyFindJS: ${i}/${queries.length}`);
@@ -455,12 +491,22 @@
         
         updateProgress(65, 'Running Fuse.js queries...');
         const fuseQueryTimes = [];
+        const fuseSampleResults = [];
         
         for (let i = 0; i < queries.length; i++) {
           const queryStart = performance.now();
           const results = fuseIndex.search(queries[i], { limit: 10 });
           const queryTime = performance.now() - queryStart;
           fuseQueryTimes.push(queryTime);
+          
+          // Capture first 20 results for display
+          if (i < 20) {
+            fuseSampleResults.push({
+              query: queries[i],
+              results: results.slice(0, 3).map(r => ({ display: r.item, score: r.score })), // Top 3 results
+              time: queryTime
+            });
+          }
           
           if (i % 10 === 0) {
             updateProgress(65 + (i / queries.length) * 25, `Fuse.js: ${i}/${queries.length}`);
@@ -491,7 +537,8 @@
           avgQueryTime: fuzzyAvgQueryTime,
           queriesPerSec: fuzzyQueriesPerSec,
           indexSize: fuzzyIndexSize,
-          totalTime: fuzzyTotalTime
+          totalTime: fuzzyTotalTime,
+          sampleResults: fuzzySampleResults
         };
         
         fuseResults = {
@@ -499,12 +546,14 @@
           avgQueryTime: fuseAvgQueryTime,
           queriesPerSec: fuseQueriesPerSec,
           indexSize: fuseIndexSize,
-          totalTime: fuseTotalTime
+          totalTime: fuseTotalTime,
+          sampleResults: fuseSampleResults
         };
         
         // Step 6: Display results
         updateProgress(100, 'Complete!');
         displayComparisonResults(fuzzyResults, fuseResults);
+        displaySampleResults(fuzzySampleResults, fuseSampleResults);
         
         setTimeout(() => {
           progressContainer.classList.add('hidden');
@@ -591,6 +640,54 @@
       const totalFaster = fuzzy.totalTime < fuse.totalTime ? 'FuzzyFindJS' : 'Fuse.js';
       document.getElementById('totalComparison').textContent = `${totalFaster} ${totalDiff}% faster`;
       document.getElementById('totalComparison').className = 'font-semibold ' + (fuzzy.totalTime < fuse.totalTime ? 'text-blue-600' : 'text-orange-600');
+    }
+
+    // Display sample query results
+    function displaySampleResults(fuzzySamples, fuseSamples) {
+      const sampleResultsDiv = document.getElementById('sampleResults');
+      const fuzzyResultsDiv = document.getElementById('fuzzyQueryResults');
+      const fuseResultsDiv = document.getElementById('fuseQueryResults');
+      
+      // Show the section
+      sampleResultsDiv.classList.remove('hidden');
+      
+      // Clear previous results
+      fuzzyResultsDiv.innerHTML = '';
+      fuseResultsDiv.innerHTML = '';
+      
+      // Display FuzzyFindJS results
+      fuzzySamples.forEach((sample, index) => {
+        const resultHTML = `
+          <div class="border-l-2 border-blue-400 pl-3 py-2 bg-blue-50 rounded">
+            <div class="font-semibold text-gray-700 mb-1">
+              Query ${index + 1}: "${sample.query}" <span class="text-xs text-gray-500">(${sample.time.toFixed(2)}ms)</span>
+            </div>
+            <div class="text-xs text-gray-600 space-y-1">
+              ${sample.results.length > 0 
+                ? sample.results.map(r => `<div>→ ${r.display} <span class="text-gray-400">(score: ${r.score.toFixed(2)})</span></div>`).join('')
+                : '<div class="text-gray-400">No results</div>'}
+            </div>
+          </div>
+        `;
+        fuzzyResultsDiv.innerHTML += resultHTML;
+      });
+      
+      // Display Fuse.js results
+      fuseSamples.forEach((sample, index) => {
+        const resultHTML = `
+          <div class="border-l-2 border-orange-400 pl-3 py-2 bg-orange-50 rounded">
+            <div class="font-semibold text-gray-700 mb-1">
+              Query ${index + 1}: "${sample.query}" <span class="text-xs text-gray-500">(${sample.time.toFixed(2)}ms)</span>
+            </div>
+            <div class="text-xs text-gray-600 space-y-1">
+              ${sample.results.length > 0 
+                ? sample.results.map(r => `<div>→ ${r.display} <span class="text-gray-400">(score: ${r.score ? r.score.toFixed(2) : 'N/A'})</span></div>`).join('')
+                : '<div class="text-gray-400">No results</div>'}
+            </div>
+          </div>
+        `;
+        fuseResultsDiv.innerHTML += resultHTML;
+      });
     }
 
     // Event listeners
