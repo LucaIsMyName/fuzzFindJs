@@ -2552,121 +2552,6 @@ getSuggestions(index, 'nonexistent_term');  // ~0.5ms (fast rejection)
 - 📊 **Analytics** - Quick membership testing
 - 🎯 **Negative Caching** - Remember what doesn't exist
 
-### 17. FQL (Fuzzy Query Language)
-
-Advanced query language with boolean operators for complex searches:
-
-```typescript
-import { buildFuzzyIndex } from 'fuzzyfindjs';
-import { executeFQLQuery } from 'fuzzyfindjs/fql';
-
-const dictionary = [
-  'JavaScript programming',
-  'TypeScript development',
-  'Python programming',
-  'Java development',
-  'React framework',
-  'Angular framework'
-];
-
-const index = buildFuzzyIndex(dictionary, {
-  config: {
-    languages: ['english'],
-    fuzzyThreshold: 0.3
-  }
-});
-
-// AND operator - both terms must match
-const results1 = executeFQLQuery(index, 'fql(javascript AND programming)');
-// → ['JavaScript programming']
-
-// OR operator - either term can match
-const results2 = executeFQLQuery(index, 'fql(react OR angular)');
-// → ['React framework', 'Angular framework']
-
-// NOT operator - exclude matches
-const results3 = executeFQLQuery(index, 'fql(programming NOT python)');
-// → ['JavaScript programming']
-
-// Complex queries with parentheses
-const results4 = executeFQLQuery(index, 'fql((javascript OR typescript) AND programming)');
-// → ['JavaScript programming', 'TypeScript development']
-
-// Quoted phrases
-const results5 = executeFQLQuery(index, 'fql("react framework")');
-// → ['React framework']
-```
-
-**FQL Operators:**
-- **AND**: Both terms must match
-- **OR**: Either term can match
-- **NOT**: Exclude matches
-- **( )**: Group expressions
-- **" "**: Exact phrase matching
-
-**Query Examples:**
-```typescript
-// Find documents with both terms
-fql(term1 AND term2)
-
-// Find documents with either term
-fql(term1 OR term2)
-
-// Find term1 but exclude term2
-fql(term1 NOT term2)
-
-// Complex boolean logic
-fql((term1 OR term2) AND term3 NOT term4)
-
-// Phrase matching
-fql("exact phrase" AND term)
-
-// Nested expressions
-fql((term1 AND term2) OR (term3 AND term4))
-```
-
-**How FQL Works:**
-1. **Lexer**: Tokenizes the query into operators and terms
-2. **Parser**: Builds an Abstract Syntax Tree (AST)
-3. **Executor**: Evaluates the AST against the fuzzy index
-4. **Fuzzy Matching**: Each term uses fuzzy search with typo tolerance
-
-**Benefits:**
-- ✅ **Complex Queries** - Boolean logic for precise searches
-- ✅ **Fuzzy Matching** - Each term still uses fuzzy search
-- ✅ **Phrase Support** - Combine with exact phrase matching
-- ✅ **Nested Logic** - Unlimited nesting with parentheses
-- ✅ **Type Safe** - Full TypeScript support
-
-**Use Cases:**
-- 🔍 **Advanced Search** - Power user search interfaces
-- 📊 **Filtering** - Complex filtering with multiple criteria
-- 🎯 **Precision** - When you need exact boolean logic
-- 📚 **Documentation** - Search with multiple required terms
-- 🛍️ **E-commerce** - Filter products with complex rules
-
-**Import FQL:**
-```typescript
-// FQL is a separate import
-import { executeFQLQuery, isFQLQuery, extractFQLQuery } from 'fuzzyfindjs/fql';
-import { FQLLexer, FQLParser, FQLExecutor } from 'fuzzyfindjs/fql';
-```
-
-**Error Handling:**
-```typescript
-import { executeFQLQuery, FQLSyntaxError, FQLTimeoutError } from 'fuzzyfindjs/fql';
-
-try {
-  const results = executeFQLQuery(index, 'fql(term1 AND term2)');
-} catch (error) {
-  if (error instanceof FQLSyntaxError) {
-    console.error('Invalid FQL syntax:', error.message);
-  } else if (error instanceof FQLTimeoutError) {
-    console.error('Query took too long:', error.message);
-  }
-}
-```
-
 ### 18. Memory Pooling for Performance
 
 Reduce garbage collection overhead by reusing objects and arrays:
@@ -3053,6 +2938,167 @@ try {
   // Index remains in previous valid state
 }
 ```
+
+## 🍥 FQL (Fuzzy Query Language)
+
+> **⚠️ BETA FEATURE**: FQL is currently in beta. Be aware of potential security and performance concerns when using FQL with untrusted user input. Consider implementing query timeouts and input validation in production environments.
+
+FQL allows complex boolean searches with AND, OR, NOT operators combined with fuzzy matching. Enable it via `options.enableFQL` in your search calls.
+
+### Enabling FQL
+
+FQL must be explicitly enabled in search options:
+
+```typescript
+import { buildFuzzyIndex, getSuggestions } from 'fuzzyfindjs';
+
+const dictionary = [
+  'JavaScript programming',
+  'TypeScript development',
+  'Python programming',
+  'Java development',
+  'React framework',
+  'Angular framework'
+];
+
+const index = buildFuzzyIndex(dictionary, {
+  config: {
+    languages: ['english'],
+    fuzzyThreshold: 0.3
+  }
+});
+
+// Enable FQL in search options
+const results = getSuggestions(index, 'javascript AND programming', 10, {
+  enableFQL: true,
+  fqlOptions: {
+    allowRegex: false,  // Disable regex for security
+    timeout: 5000       // 5 second timeout
+  }
+});
+```
+
+### Query Syntax
+
+**Basic Operators:**
+
+```typescript
+// AND - both terms must match
+const results1 = getSuggestions(index, 'javascript AND programming', 10, {
+  enableFQL: true
+});
+// Returns: ['JavaScript programming']
+
+// OR - either term can match
+const results2 = getSuggestions(index, 'react OR angular', 10, {
+  enableFQL: true
+});
+// Returns: ['React framework', 'Angular framework']
+
+// NOT - exclude matches
+const results3 = getSuggestions(index, 'programming NOT python', 10, {
+  enableFQL: true
+});
+// Returns: ['JavaScript programming']
+```
+
+**Complex Queries:**
+
+```typescript
+// Parentheses for grouping
+const results4 = getSuggestions(index, '(javascript OR typescript) AND programming', 10, {
+  enableFQL: true
+});
+// Returns: ['JavaScript programming', 'TypeScript development']
+
+// Quoted phrases for exact matching
+const results5 = getSuggestions(index, '"react framework"', 10, {
+  enableFQL: true
+});
+// Returns: ['React framework']
+
+// Nested boolean logic
+const results6 = getSuggestions(index, '(term1 AND term2) OR (term3 AND term4)', 10, {
+  enableFQL: true
+});
+```
+
+### FQL Options
+
+```typescript
+interface FQLOptions {
+  allowRegex?: boolean;  // Allow regex patterns (default: false, security risk)
+  timeout?: number;      // Query timeout in ms (default: 10000)
+}
+
+// Example with options
+const results = getSuggestions(index, 'complex AND query', 10, {
+  enableFQL: true,
+  fqlOptions: {
+    allowRegex: false,  // Recommended for production
+    timeout: 3000       // Fail after 3 seconds
+  }
+});
+```
+
+### Operators Reference
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `AND` | Both terms must match | `term1 AND term2` |
+| `OR` | Either term can match | `term1 OR term2` |
+| `NOT` | Exclude matches | `term1 NOT term2` |
+| `( )` | Group expressions | `(term1 OR term2) AND term3` |
+| `" "` | Exact phrase | `"exact phrase"` |
+
+### Error Handling
+
+```typescript
+try {
+  const results = getSuggestions(index, 'invalid AND (query', 10, {
+    enableFQL: true
+  });
+} catch (error) {
+  console.error('FQL query failed:', error.message);
+  // Handle syntax errors or timeouts
+}
+```
+
+### Security Considerations
+
+When using FQL with user input:
+
+1. **Disable regex**: Set `allowRegex: false` to prevent ReDoS attacks
+2. **Set timeouts**: Use `timeout` option to prevent long-running queries
+3. **Validate input**: Sanitize user queries before execution
+4. **Rate limiting**: Implement rate limiting for FQL queries
+
+```typescript
+// Production-safe FQL configuration
+const results = getSuggestions(index, userQuery, 10, {
+  enableFQL: true,
+  fqlOptions: {
+    allowRegex: false,  // Security: prevent regex attacks
+    timeout: 2000       // Performance: fail fast
+  }
+});
+```
+
+### Performance Notes
+
+- FQL queries are slower than simple fuzzy searches
+- Complex nested queries can be computationally expensive
+- Use timeouts to prevent performance degradation
+- Consider caching FQL results for repeated queries
+
+### Use Cases
+
+- Advanced search interfaces with boolean logic
+- Document search with multiple required terms
+- E-commerce product filtering with complex rules
+- Power user search features
+- Technical documentation search
+
 
 ## 🧪 Algorithm Details
 

@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FuzzyFindJS - Performance Speed Test</title>
+  <title>FuzzyFindJS vs Fuse.js - Performance Comparison</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- If you see errors, hard refresh: Cmd+Shift+R (Mac) or Ctrl+Shift+R (Windows) -->
-  <script src="../dist/umd/fuzzyfindjs.min.js?v=1.0.20"></script>
+  <!-- FuzzyFindJS -->
+  <script src="../dist/umd/fuzzyfindjs.min.js"></script>
+  <!-- Fuse.js from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
   <style>
     .metric-card {
       transition: all 0.3s ease;
@@ -27,8 +29,8 @@
   <div class="container mx-auto px-4 py-8 max-w-7xl">
     <!-- Header -->
     <div class="mb-8">
-      <h1 class="text-4xl font-bold text-gray-900 mb-2">⚡ FuzzyFindJS Performance Test</h1>
-      <p class="text-gray-600">Benchmark fuzzy search performance with large datasets</p>
+      <h1 class="text-4xl font-bold text-gray-900 mb-2">⚡ FuzzyFindJS vs Fuse.js</h1>
+      <p class="text-gray-600">Head-to-head performance comparison with large datasets</p>
     </div>
 
     <!-- Controls -->
@@ -105,152 +107,159 @@
       </div>
     </div>
 
-    <!-- Results Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <!-- Index Build Time -->
-      <div class="metric-card bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div class="text-sm text-gray-600 mb-1">Index Build Time</div>
-        <div id="buildTime" class="text-3xl font-bold text-gray-900">-</div>
-        <div class="text-xs text-gray-500 mt-1">Time to build search index</div>
-      </div>
-
-      <!-- Average Query Time -->
-      <div class="metric-card bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div class="text-sm text-gray-600 mb-1">Avg Query Time</div>
-        <div id="avgQueryTime" class="text-3xl font-bold text-gray-900">-</div>
-        <div class="text-xs text-gray-500 mt-1">Average search time</div>
-      </div>
-
-      <!-- Queries Per Second -->
-      <div class="metric-card bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div class="text-sm text-gray-600 mb-1">Queries/Second</div>
-        <div id="queriesPerSec" class="text-3xl font-bold text-gray-900">-</div>
-        <div class="text-xs text-gray-500 mt-1">Throughput</div>
-      </div>
-
-      <!-- Memory Usage -->
-      <div class="metric-card bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div class="text-sm text-gray-600 mb-1">Index Size</div>
-        <div id="indexSize" class="text-3xl font-bold text-gray-900">-</div>
-        <div class="text-xs text-gray-500 mt-1">Estimated memory</div>
-      </div>
-    </div>
-
-    <!-- Detailed Results -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Query Performance Breakdown -->
-      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Query Performance Breakdown</h3>
-        <div class="space-y-3">
+    <!-- Comparison Results -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <!-- FuzzyFindJS Results -->
+      <div class="bg-white rounded-lg shadow-sm border-2 border-blue-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold text-gray-900">FuzzyFindJS</h2>
+          <span id="fuzzyWinner" class="hidden px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-full">🏆 Winner</span>
+        </div>
+        <div class="space-y-4">
           <div>
-            <div class="flex justify-between text-sm mb-1">
-              <span class="text-gray-600">Fastest Query</span>
-              <span id="fastestQuery" class="font-semibold text-green-600">-</span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-2">
-              <div id="fastestBar" class="bg-green-500 h-2 rounded-full" style="width: 0%"></div>
-            </div>
+            <div class="text-sm text-gray-600 mb-1">Index Build Time</div>
+            <div id="fuzzyBuildTime" class="text-2xl font-bold text-gray-900">-</div>
           </div>
-          
           <div>
-            <div class="flex justify-between text-sm mb-1">
-              <span class="text-gray-600">Median Query</span>
-              <span id="medianQuery" class="font-semibold text-blue-600">-</span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-2">
-              <div id="medianBar" class="bg-blue-500 h-2 rounded-full" style="width: 0%"></div>
-            </div>
+            <div class="text-sm text-gray-600 mb-1">Avg Query Time</div>
+            <div id="fuzzyAvgQueryTime" class="text-2xl font-bold text-gray-900">-</div>
           </div>
-          
           <div>
-            <div class="flex justify-between text-sm mb-1">
-              <span class="text-gray-600">Slowest Query</span>
-              <span id="slowestQuery" class="font-semibold text-red-600">-</span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-2">
-              <div id="slowestBar" class="bg-red-500 h-2 rounded-full" style="width: 100%"></div>
-            </div>
+            <div class="text-sm text-gray-600 mb-1">Queries/Second</div>
+            <div id="fuzzyQueriesPerSec" class="text-2xl font-bold text-gray-900">-</div>
           </div>
-
-          <div class="pt-3 border-t border-gray-200">
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-600">95th Percentile</span>
-              <span id="p95Query" class="font-semibold text-gray-900">-</span>
-            </div>
+          <div>
+            <div class="text-sm text-gray-600 mb-1">Index Size</div>
+            <div id="fuzzyIndexSize" class="text-2xl font-bold text-gray-900">-</div>
+          </div>
+          <div>
+            <div class="text-sm text-gray-600 mb-1">Total Time</div>
+            <div id="fuzzyTotalTime" class="text-2xl font-bold text-gray-900">-</div>
           </div>
         </div>
       </div>
 
-      <!-- Test Configuration -->
-      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Test Configuration</h3>
-        <div class="space-y-2 text-sm">
-          <div class="flex justify-between">
-            <span class="text-gray-600">Dataset Size:</span>
-            <span id="configDatasetSize" class="font-semibold text-gray-900">-</span>
+      <!-- Fuse.js Results -->
+      <div class="bg-white rounded-lg shadow-sm border-2 border-orange-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold text-gray-900">Fuse.js</h2>
+          <span id="fuseWinner" class="hidden px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-full">🏆 Winner</span>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <div class="text-sm text-gray-600 mb-1">Index Build Time</div>
+            <div id="fuseBuildTime" class="text-2xl font-bold text-gray-900">-</div>
           </div>
-          <div class="flex justify-between">
-            <span class="text-gray-600">Performance Mode:</span>
-            <span id="configMode" class="font-semibold text-gray-900">-</span>
+          <div>
+            <div class="text-sm text-gray-600 mb-1">Avg Query Time</div>
+            <div id="fuseAvgQueryTime" class="text-2xl font-bold text-gray-900">-</div>
           </div>
-          <div class="flex justify-between">
-            <span class="text-gray-600">Test Queries:</span>
-            <span id="configQueries" class="font-semibold text-gray-900">-</span>
+          <div>
+            <div class="text-sm text-gray-600 mb-1">Queries/Second</div>
+            <div id="fuseQueriesPerSec" class="text-2xl font-bold text-gray-900">-</div>
           </div>
-          <div class="flex justify-between">
-            <span class="text-gray-600">Features Enabled:</span>
-            <span id="configFeatures" class="font-semibold text-gray-900">-</span>
+          <div>
+            <div class="text-sm text-gray-600 mb-1">Index Size</div>
+            <div id="fuseIndexSize" class="text-2xl font-bold text-gray-900">-</div>
           </div>
-          <div class="flex justify-between">
-            <span class="text-gray-600">Inverted Index:</span>
-            <span id="configInverted" class="font-semibold text-gray-900">-</span>
-          </div>
-          <div class="flex justify-between pt-2 border-t border-gray-200">
-            <span class="text-gray-600">Total Test Time:</span>
-            <span id="totalTime" class="font-semibold text-gray-900">-</span>
+          <div>
+            <div class="text-sm text-gray-600 mb-1">Total Time</div>
+            <div id="fuseTotalTime" class="text-2xl font-bold text-gray-900">-</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Sample Queries Log -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-semibold text-gray-900">Sample Query Results</h3>
-        <span id="sampleCount" class="text-sm text-gray-500">Showing first 10</span>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th class="px-4 py-2 text-left text-gray-600 font-semibold">Query</th>
-              <th class="px-4 py-2 text-left text-gray-600 font-semibold">Time</th>
-              <th class="px-4 py-2 text-left text-gray-600 font-semibold">Results</th>
-              <th class="px-4 py-2 text-left text-gray-600 font-semibold">Top Match</th>
-              <th class="px-4 py-2 text-left text-gray-600 font-semibold">Score</th>
-            </tr>
-          </thead>
-          <tbody id="sampleResults" class="divide-y divide-gray-200">
-            <tr>
-              <td colspan="5" class="px-4 py-8 text-center text-gray-400">
-                Run a test to see results
-              </td>
-            </tr>
-          </tbody>
-        </table>
+    <!-- Performance Comparison Chart -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Performance Comparison</h3>
+      <div class="space-y-4">
+        <div>
+          <div class="flex justify-between text-sm mb-2">
+            <span class="text-gray-600">Index Build Time</span>
+            <span id="buildComparison" class="font-semibold">-</span>
+          </div>
+          <div class="flex gap-2">
+            <div class="flex-1">
+              <div class="w-full bg-gray-200 rounded-full h-6 relative overflow-hidden">
+                <div id="fuzzyBuildBar" class="bg-blue-500 h-6 rounded-full flex items-center justify-end pr-2" style="width: 0%">
+                  <span class="text-xs text-white font-semibold"></span>
+                </div>
+              </div>
+              <div class="text-xs text-gray-500 mt-1">FuzzyFindJS</div>
+            </div>
+            <div class="flex-1">
+              <div class="w-full bg-gray-200 rounded-full h-6 relative overflow-hidden">
+                <div id="fuseBuildBar" class="bg-orange-500 h-6 rounded-full flex items-center justify-end pr-2" style="width: 0%">
+                  <span class="text-xs text-white font-semibold"></span>
+                </div>
+              </div>
+              <div class="text-xs text-gray-500 mt-1">Fuse.js</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between text-sm mb-2">
+            <span class="text-gray-600">Average Query Time</span>
+            <span id="queryComparison" class="font-semibold">-</span>
+          </div>
+          <div class="flex gap-2">
+            <div class="flex-1">
+              <div class="w-full bg-gray-200 rounded-full h-6 relative overflow-hidden">
+                <div id="fuzzyQueryBar" class="bg-blue-500 h-6 rounded-full flex items-center justify-end pr-2" style="width: 0%">
+                  <span class="text-xs text-white font-semibold"></span>
+                </div>
+              </div>
+              <div class="text-xs text-gray-500 mt-1">FuzzyFindJS</div>
+            </div>
+            <div class="flex-1">
+              <div class="w-full bg-gray-200 rounded-full h-6 relative overflow-hidden">
+                <div id="fuseQueryBar" class="bg-orange-500 h-6 rounded-full flex items-center justify-end pr-2" style="width: 0%">
+                  <span class="text-xs text-white font-semibold"></span>
+                </div>
+              </div>
+              <div class="text-xs text-gray-500 mt-1">Fuse.js</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between text-sm mb-2">
+            <span class="text-gray-600">Total Time</span>
+            <span id="totalComparison" class="font-semibold">-</span>
+          </div>
+          <div class="flex gap-2">
+            <div class="flex-1">
+              <div class="w-full bg-gray-200 rounded-full h-6 relative overflow-hidden">
+                <div id="fuzzyTotalBar" class="bg-blue-500 h-6 rounded-full flex items-center justify-end pr-2" style="width: 0%">
+                  <span class="text-xs text-white font-semibold"></span>
+                </div>
+              </div>
+              <div class="text-xs text-gray-500 mt-1">FuzzyFindJS</div>
+            </div>
+            <div class="flex-1">
+              <div class="w-full bg-gray-200 rounded-full h-6 relative overflow-hidden">
+                <div id="fuseTotalBar" class="bg-orange-500 h-6 rounded-full flex items-center justify-end pr-2" style="width: 0%">
+                  <span class="text-xs text-white font-semibold"></span>
+                </div>
+              </div>
+              <div class="text-xs text-gray-500 mt-1">Fuse.js</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Performance Tips -->
-    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-6">
-      <h3 class="text-lg font-semibold text-blue-900 mb-3">💡 Performance Tips</h3>
-      <ul class="space-y-2 text-sm text-blue-800">
-        <li>• <strong>Fast mode:</strong> Best for real-time autocomplete (1-2ms queries)</li>
-        <li>• <strong>Balanced mode:</strong> Good mix of speed and accuracy (2-5ms queries)</li>
-        <li>• <strong>Comprehensive mode:</strong> Maximum accuracy, slower (5-20ms queries)</li>
-        <li>• <strong>Inverted index:</strong> Auto-enabled for 10K+ words, 10-100x faster for large datasets</li>
-        <li>• <strong>Caching:</strong> Repeated queries are 10-100x faster with LRU cache</li>
-      </ul>
+    <!-- About the Test -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+      <h3 class="text-lg font-semibold text-blue-900 mb-3">About This Comparison</h3>
+      <div class="space-y-2 text-sm text-blue-800">
+        <p><strong>Test Methodology:</strong> Both libraries are tested sequentially with identical datasets and queries to ensure fair comparison.</p>
+        <p><strong>FuzzyFindJS:</strong> Multi-language fuzzy search with phonetic matching, compound word splitting, and inverted index for large datasets.</p>
+        <p><strong>Fuse.js:</strong> Popular lightweight fuzzy-search library with configurable threshold and scoring.</p>
+        <p><strong>Note:</strong> Results may vary based on dataset characteristics, query patterns, and browser performance.</p>
+      </div>
     </div>
   </div>
 
@@ -269,7 +278,9 @@
 
     // State
     let fuzzyIndex = null;
-    let testResults = null;
+    let fuseIndex = null;
+    let fuzzyResults = null;
+    let fuseResults = null;
 
     // Update labels
     datasetSizeInput.addEventListener('input', (e) => {
@@ -375,7 +386,7 @@
       return 'result-bad';
     }
 
-    // Run performance test
+    // Run performance test for both libraries
     async function runTest() {
       runTestButton.disabled = true;
       progressContainer.classList.remove('hidden');
@@ -386,52 +397,66 @@
       
       try {
         // Step 1: Generate dataset
-        updateProgress(10, 'Generating dataset...');
+        updateProgress(5, 'Generating dataset...');
         await new Promise(resolve => setTimeout(resolve, 100));
         const dataset = generateDataset(datasetSize);
         
-        // Step 2: Build index
-        updateProgress(30, 'Building search index...');
+        // Step 2: Generate queries
+        updateProgress(10, 'Generating test queries...');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const queries = generateQueries(dataset, queryCount);
+        
+        // Step 3: Test FuzzyFindJS
+        updateProgress(20, 'Building FuzzyFindJS index...');
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        const buildStart = performance.now();
+        const fuzzyBuildStart = performance.now();
         fuzzyIndex = FuzzyFindJS.buildFuzzyIndex(dataset, {
           config: {
             performance: performanceMode,
             maxResults: 10
           }
         });
-        const buildTime = performance.now() - buildStart;
+        const fuzzyBuildTime = performance.now() - fuzzyBuildStart;
         
-        // Step 3: Generate queries
-        updateProgress(50, 'Generating test queries...');
-        await new Promise(resolve => setTimeout(resolve, 100));
-        const queries = generateQueries(dataset, queryCount);
-        
-        // Step 4: Run queries
-        updateProgress(60, 'Running queries...');
-        const queryTimes = [];
-        const sampleResults = [];
+        updateProgress(35, 'Running FuzzyFindJS queries...');
+        const fuzzyQueryTimes = [];
         
         for (let i = 0; i < queries.length; i++) {
           const queryStart = performance.now();
           const results = FuzzyFindJS.getSuggestions(fuzzyIndex, queries[i], 10);
           const queryTime = performance.now() - queryStart;
-          
-          queryTimes.push(queryTime);
-          
-          if (i < 10) {
-            sampleResults.push({
-              query: queries[i],
-              time: queryTime,
-              resultCount: results.length,
-              topMatch: results[0]?.display || '-',
-              topScore: results[0]?.score || 0
-            });
-          }
+          fuzzyQueryTimes.push(queryTime);
           
           if (i % 10 === 0) {
-            updateProgress(60 + (i / queries.length) * 30, `Running queries... ${i}/${queries.length}`);
+            updateProgress(35 + (i / queries.length) * 15, `FuzzyFindJS: ${i}/${queries.length}`);
+            await new Promise(resolve => setTimeout(resolve, 0));
+          }
+        }
+        
+        // Step 4: Test Fuse.js
+        updateProgress(50, 'Building Fuse.js index...');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const fuseBuildStart = performance.now();
+        fuseIndex = new Fuse(dataset, {
+          threshold: 0.3,
+          keys: [''],
+          includeScore: true
+        });
+        const fuseBuildTime = performance.now() - fuseBuildStart;
+        
+        updateProgress(65, 'Running Fuse.js queries...');
+        const fuseQueryTimes = [];
+        
+        for (let i = 0; i < queries.length; i++) {
+          const queryStart = performance.now();
+          const results = fuseIndex.search(queries[i], { limit: 10 });
+          const queryTime = performance.now() - queryStart;
+          fuseQueryTimes.push(queryTime);
+          
+          if (i % 10 === 0) {
+            updateProgress(65 + (i / queries.length) * 25, `Fuse.js: ${i}/${queries.length}`);
             await new Promise(resolve => setTimeout(resolve, 0));
           }
         }
@@ -440,42 +465,39 @@
         updateProgress(95, 'Calculating statistics...');
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        queryTimes.sort((a, b) => a - b);
-        const avgQueryTime = queryTimes.reduce((a, b) => a + b, 0) / queryTimes.length;
-        const medianQueryTime = queryTimes[Math.floor(queryTimes.length / 2)];
-        const p95QueryTime = queryTimes[Math.floor(queryTimes.length * 0.95)];
-        const fastestQuery = queryTimes[0];
-        const slowestQuery = queryTimes[queryTimes.length - 1];
-        const queriesPerSec = 1000 / avgQueryTime;
+        // FuzzyFindJS stats
+        fuzzyQueryTimes.sort((a, b) => a - b);
+        const fuzzyAvgQueryTime = fuzzyQueryTimes.reduce((a, b) => a + b, 0) / fuzzyQueryTimes.length;
+        const fuzzyQueriesPerSec = 1000 / fuzzyAvgQueryTime;
+        const fuzzyIndexSize = JSON.stringify(fuzzyIndex).length;
+        const fuzzyTotalTime = fuzzyBuildTime + fuzzyQueryTimes.reduce((a, b) => a + b, 0);
         
-        // Estimate index size
-        const indexSize = JSON.stringify(fuzzyIndex).length;
+        // Fuse.js stats
+        fuseQueryTimes.sort((a, b) => a - b);
+        const fuseAvgQueryTime = fuseQueryTimes.reduce((a, b) => a + b, 0) / fuseQueryTimes.length;
+        const fuseQueriesPerSec = 1000 / fuseAvgQueryTime;
+        const fuseIndexSize = JSON.stringify(fuseIndex).length;
+        const fuseTotalTime = fuseBuildTime + fuseQueryTimes.reduce((a, b) => a + b, 0);
         
-        const totalTime = buildTime + queryTimes.reduce((a, b) => a + b, 0);
+        fuzzyResults = {
+          buildTime: fuzzyBuildTime,
+          avgQueryTime: fuzzyAvgQueryTime,
+          queriesPerSec: fuzzyQueriesPerSec,
+          indexSize: fuzzyIndexSize,
+          totalTime: fuzzyTotalTime
+        };
         
-        testResults = {
-          buildTime,
-          avgQueryTime,
-          medianQueryTime,
-          p95QueryTime,
-          fastestQuery,
-          slowestQuery,
-          queriesPerSec,
-          indexSize,
-          totalTime,
-          sampleResults,
-          config: {
-            datasetSize,
-            performanceMode,
-            queryCount,
-            features: fuzzyIndex.config.features.length,
-            invertedIndex: datasetSize >= 10000
-          }
+        fuseResults = {
+          buildTime: fuseBuildTime,
+          avgQueryTime: fuseAvgQueryTime,
+          queriesPerSec: fuseQueriesPerSec,
+          indexSize: fuseIndexSize,
+          totalTime: fuseTotalTime
         };
         
         // Step 6: Display results
         updateProgress(100, 'Complete!');
-        displayResults(testResults);
+        displayComparisonResults(fuzzyResults, fuseResults);
         
         setTimeout(() => {
           progressContainer.classList.add('hidden');
@@ -490,50 +512,78 @@
       }
     }
 
-    // Display results
-    function displayResults(results) {
-      // Main metrics
-      document.getElementById('buildTime').textContent = formatTime(results.buildTime);
-      document.getElementById('buildTime').className = 'text-3xl font-bold ' + getPerformanceClass(results.buildTime, 100, 500);
+    // Display comparison results
+    function displayComparisonResults(fuzzy, fuse) {
+      // FuzzyFindJS metrics
+      document.getElementById('fuzzyBuildTime').textContent = formatTime(fuzzy.buildTime);
+      document.getElementById('fuzzyBuildTime').className = 'text-2xl font-bold ' + getPerformanceClass(fuzzy.buildTime, 100, 500);
       
-      document.getElementById('avgQueryTime').textContent = formatTime(results.avgQueryTime);
-      document.getElementById('avgQueryTime').className = 'text-3xl font-bold ' + getPerformanceClass(results.avgQueryTime);
+      document.getElementById('fuzzyAvgQueryTime').textContent = formatTime(fuzzy.avgQueryTime);
+      document.getElementById('fuzzyAvgQueryTime').className = 'text-2xl font-bold ' + getPerformanceClass(fuzzy.avgQueryTime);
       
-      document.getElementById('queriesPerSec').textContent = Math.round(results.queriesPerSec).toLocaleString();
-      document.getElementById('queriesPerSec').className = 'text-3xl font-bold text-gray-900';
+      document.getElementById('fuzzyQueriesPerSec').textContent = Math.round(fuzzy.queriesPerSec).toLocaleString();
+      document.getElementById('fuzzyIndexSize').textContent = formatSize(fuzzy.indexSize);
+      document.getElementById('fuzzyTotalTime').textContent = formatTime(fuzzy.totalTime);
       
-      document.getElementById('indexSize').textContent = formatSize(results.indexSize);
-      document.getElementById('indexSize').className = 'text-3xl font-bold text-gray-900';
+      // Fuse.js metrics
+      document.getElementById('fuseBuildTime').textContent = formatTime(fuse.buildTime);
+      document.getElementById('fuseBuildTime').className = 'text-2xl font-bold ' + getPerformanceClass(fuse.buildTime, 100, 500);
       
-      // Query breakdown
-      document.getElementById('fastestQuery').textContent = formatTime(results.fastestQuery);
-      document.getElementById('medianQuery').textContent = formatTime(results.medianQueryTime);
-      document.getElementById('slowestQuery').textContent = formatTime(results.slowestQuery);
-      document.getElementById('p95Query').textContent = formatTime(results.p95QueryTime);
+      document.getElementById('fuseAvgQueryTime').textContent = formatTime(fuse.avgQueryTime);
+      document.getElementById('fuseAvgQueryTime').className = 'text-2xl font-bold ' + getPerformanceClass(fuse.avgQueryTime);
       
-      const maxTime = results.slowestQuery;
-      document.getElementById('fastestBar').style.width = (results.fastestQuery / maxTime * 100) + '%';
-      document.getElementById('medianBar').style.width = (results.medianQueryTime / maxTime * 100) + '%';
+      document.getElementById('fuseQueriesPerSec').textContent = Math.round(fuse.queriesPerSec).toLocaleString();
+      document.getElementById('fuseIndexSize').textContent = formatSize(fuse.indexSize);
+      document.getElementById('fuseTotalTime').textContent = formatTime(fuse.totalTime);
       
-      // Configuration
-      document.getElementById('configDatasetSize').textContent = results.config.datasetSize.toLocaleString();
-      document.getElementById('configMode').textContent = results.config.performanceMode.charAt(0).toUpperCase() + results.config.performanceMode.slice(1);
-      document.getElementById('configQueries').textContent = results.config.queryCount.toLocaleString();
-      document.getElementById('configFeatures').textContent = results.config.features;
-      document.getElementById('configInverted').textContent = results.config.invertedIndex ? 'Yes ✓' : 'No';
-      document.getElementById('totalTime').textContent = formatTime(results.totalTime);
+      // Determine winner
+      const fuzzyWinner = fuzzy.totalTime < fuse.totalTime;
+      document.getElementById('fuzzyWinner').classList.toggle('hidden', !fuzzyWinner);
+      document.getElementById('fuseWinner').classList.toggle('hidden', fuzzyWinner);
       
-      // Sample results table
-      const tbody = document.getElementById('sampleResults');
-      tbody.innerHTML = results.sampleResults.map(r => `
-        <tr class="hover:bg-gray-50">
-          <td class="px-4 py-2 font-mono text-xs">${r.query}</td>
-          <td class="px-4 py-2 ${getPerformanceClass(r.time)}">${formatTime(r.time)}</td>
-          <td class="px-4 py-2">${r.resultCount}</td>
-          <td class="px-4 py-2 font-mono text-xs">${r.topMatch}</td>
-          <td class="px-4 py-2">${(r.topScore * 100).toFixed(1)}%</td>
-        </tr>
-      `).join('');
+      // Comparison bars
+      const maxBuildTime = Math.max(fuzzy.buildTime, fuse.buildTime);
+      const maxQueryTime = Math.max(fuzzy.avgQueryTime, fuse.avgQueryTime);
+      const maxTotalTime = Math.max(fuzzy.totalTime, fuse.totalTime);
+      
+      // Build time comparison
+      const fuzzyBuildPercent = (fuzzy.buildTime / maxBuildTime * 100);
+      const fuseBuildPercent = (fuse.buildTime / maxBuildTime * 100);
+      document.getElementById('fuzzyBuildBar').style.width = fuzzyBuildPercent + '%';
+      document.getElementById('fuseBuildBar').style.width = fuseBuildPercent + '%';
+      document.getElementById('fuzzyBuildBar').querySelector('span').textContent = formatTime(fuzzy.buildTime);
+      document.getElementById('fuseBuildBar').querySelector('span').textContent = formatTime(fuse.buildTime);
+      
+      const buildDiff = ((Math.abs(fuzzy.buildTime - fuse.buildTime) / Math.max(fuzzy.buildTime, fuse.buildTime)) * 100).toFixed(1);
+      const buildFaster = fuzzy.buildTime < fuse.buildTime ? 'FuzzyFindJS' : 'Fuse.js';
+      document.getElementById('buildComparison').textContent = `${buildFaster} ${buildDiff}% faster`;
+      document.getElementById('buildComparison').className = 'font-semibold ' + (fuzzy.buildTime < fuse.buildTime ? 'text-blue-600' : 'text-orange-600');
+      
+      // Query time comparison
+      const fuzzyQueryPercent = (fuzzy.avgQueryTime / maxQueryTime * 100);
+      const fuseQueryPercent = (fuse.avgQueryTime / maxQueryTime * 100);
+      document.getElementById('fuzzyQueryBar').style.width = fuzzyQueryPercent + '%';
+      document.getElementById('fuseQueryBar').style.width = fuseQueryPercent + '%';
+      document.getElementById('fuzzyQueryBar').querySelector('span').textContent = formatTime(fuzzy.avgQueryTime);
+      document.getElementById('fuseQueryBar').querySelector('span').textContent = formatTime(fuse.avgQueryTime);
+      
+      const queryDiff = ((Math.abs(fuzzy.avgQueryTime - fuse.avgQueryTime) / Math.max(fuzzy.avgQueryTime, fuse.avgQueryTime)) * 100).toFixed(1);
+      const queryFaster = fuzzy.avgQueryTime < fuse.avgQueryTime ? 'FuzzyFindJS' : 'Fuse.js';
+      document.getElementById('queryComparison').textContent = `${queryFaster} ${queryDiff}% faster`;
+      document.getElementById('queryComparison').className = 'font-semibold ' + (fuzzy.avgQueryTime < fuse.avgQueryTime ? 'text-blue-600' : 'text-orange-600');
+      
+      // Total time comparison
+      const fuzzyTotalPercent = (fuzzy.totalTime / maxTotalTime * 100);
+      const fuseTotalPercent = (fuse.totalTime / maxTotalTime * 100);
+      document.getElementById('fuzzyTotalBar').style.width = fuzzyTotalPercent + '%';
+      document.getElementById('fuseTotalBar').style.width = fuseTotalPercent + '%';
+      document.getElementById('fuzzyTotalBar').querySelector('span').textContent = formatTime(fuzzy.totalTime);
+      document.getElementById('fuseTotalBar').querySelector('span').textContent = formatTime(fuse.totalTime);
+      
+      const totalDiff = ((Math.abs(fuzzy.totalTime - fuse.totalTime) / Math.max(fuzzy.totalTime, fuse.totalTime)) * 100).toFixed(1);
+      const totalFaster = fuzzy.totalTime < fuse.totalTime ? 'FuzzyFindJS' : 'Fuse.js';
+      document.getElementById('totalComparison').textContent = `${totalFaster} ${totalDiff}% faster`;
+      document.getElementById('totalComparison').className = 'font-semibold ' + (fuzzy.totalTime < fuse.totalTime ? 'text-blue-600' : 'text-orange-600');
     }
 
     // Event listeners
