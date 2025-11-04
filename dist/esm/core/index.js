@@ -51,47 +51,50 @@ function buildFuzzyIndex(words = [], options = {}) {
   languageProcessors.forEach((processor) => {
     index.languageProcessors.set(processor.language, processor);
   });
+  const shouldUseInvertedIndex = options.useInvertedIndex || config.useInvertedIndex || config.useBM25 || config.useBloomFilter || words.length >= 1e4;
   const processedWords = /* @__PURE__ */ new Set();
   let processed = 0;
-  for (const item of words) {
-    if (!item) continue;
-    if (hasFields && isObjectArray) {
-      const fieldValues = extractFieldValues(item, options.fields);
-      if (!fieldValues) continue;
-      const baseId = Object.values(fieldValues)[0] || `item_${processed}`;
-      index.fieldData.set(baseId, fieldValues);
-      for (const [fieldName, fieldValue] of Object.entries(fieldValues)) {
-        if (!fieldValue || fieldValue.trim().length < config.minQueryLength) continue;
-        const trimmedValue = fieldValue.trim();
-        if (!processedWords.has(baseId.toLowerCase())) {
-          processedWords.add(baseId.toLowerCase());
-          index.base.push(baseId);
+  if (!shouldUseInvertedIndex) {
+    for (const item of words) {
+      if (!item) continue;
+      if (hasFields && isObjectArray) {
+        const fieldValues = extractFieldValues(item, options.fields);
+        if (!fieldValues) continue;
+        const baseId = Object.values(fieldValues)[0] || `item_${processed}`;
+        index.fieldData.set(baseId, fieldValues);
+        for (const [fieldName, fieldValue] of Object.entries(fieldValues)) {
+          if (!fieldValue || fieldValue.trim().length < config.minQueryLength) continue;
+          const trimmedValue = fieldValue.trim();
+          if (!processedWords.has(baseId.toLowerCase())) {
+            processedWords.add(baseId.toLowerCase());
+            index.base.push(baseId);
+          }
+          for (const processor of languageProcessors) {
+            processWordWithProcessorAndField(trimmedValue, baseId, fieldName, processor, index, config, featureSet);
+          }
         }
+      } else {
+        const word = typeof item === "string" ? item : String(item);
+        if (word.trim().length < config.minQueryLength) continue;
+        const trimmedWord = word.trim();
+        if (processedWords.has(trimmedWord.toLowerCase())) continue;
+        processedWords.add(trimmedWord.toLowerCase());
+        index.base.push(trimmedWord);
         for (const processor of languageProcessors) {
-          processWordWithProcessorAndField(trimmedValue, baseId, fieldName, processor, index, config, featureSet);
+          processWordWithProcessor(trimmedWord, processor, index, config, featureSet);
         }
       }
-    } else {
-      const word = typeof item === "string" ? item : String(item);
-      if (word.trim().length < config.minQueryLength) continue;
-      const trimmedWord = word.trim();
-      if (processedWords.has(trimmedWord.toLowerCase())) continue;
-      processedWords.add(trimmedWord.toLowerCase());
-      index.base.push(trimmedWord);
-      for (const processor of languageProcessors) {
-        processWordWithProcessor(trimmedWord, processor, index, config, featureSet);
+      processed++;
+      if (options.onProgress) {
+        options.onProgress(processed, words.length);
       }
-    }
-    processed++;
-    if (options.onProgress) {
-      options.onProgress(processed, words.length);
     }
   }
-  const shouldUseInvertedIndex = options.useInvertedIndex || config.useInvertedIndex || config.useBM25 || config.useBloomFilter || words.length >= 1e4;
   if (shouldUseInvertedIndex) {
     const { invertedIndex, documents } = buildInvertedIndex(words, languageProcessors, config, featureSet);
     index.invertedIndex = invertedIndex;
     index.documents = documents;
+    index.base = documents.map((doc) => doc.word);
   }
   const enableCache = config.enableCache !== false;
   if (enableCache) {
@@ -102,27 +105,18 @@ function buildFuzzyIndex(words = [], options = {}) {
 }
 function processWordWithProcessor(word, processor, index, config, featureSet) {
   const normalized = processor.normalize(word);
-  const lowercase = word.toLowerCase();
-  addToVariantMap(index.variantToBase, normalized, word);
-  if (lowercase !== normalized) {
-    addToVariantMap(index.variantToBase, lowercase, word);
-  }
-  if (word !== normalized && word !== lowercase) {
-    addToVariantMap(index.variantToBase, word, word);
-  }
+  addToVariantMap(index.variantToBase, normalized.toLowerCase(), word);
   const accentFreeWord = removeAccents(word);
   if (accentFreeWord !== word) {
-    addToVariantMap(index.variantToBase, accentFreeWord, word);
-    addToVariantMap(index.variantToBase, accentFreeWord.toLowerCase(), word);
-    const normalizedAccentFree = processor.normalize(accentFreeWord);
-    if (normalizedAccentFree !== accentFreeWord.toLowerCase()) {
+    const normalizedAccentFree = processor.normalize(accentFreeWord).toLowerCase();
+    if (normalizedAccentFree !== normalized.toLowerCase()) {
       addToVariantMap(index.variantToBase, normalizedAccentFree, word);
     }
   }
   if (featureSet.has("partial-words")) {
     const variants = processor.getWordVariants(word, config.performance);
     variants.forEach((variant) => {
-      addToVariantMap(index.variantToBase, variant, word);
+      addToVariantMap(index.variantToBase, variant.toLowerCase(), word);
     });
   }
   if (featureSet.has("phonetic") && processor.supportedFeatures.includes("phonetic")) {
@@ -133,7 +127,7 @@ function processWordWithProcessor(word, processor, index, config, featureSet) {
   }
   const shouldLimitNgrams = config.performance === "fast" && normalized.length > 15;
   const ngramSource = shouldLimitNgrams ? normalized.substring(0, 15) : normalized;
-  const ngrams = generateNgrams(ngramSource, config.ngramSize);
+  const ngrams = generateNgrams(ngramSource.toLowerCase(), config.ngramSize);
   ngrams.forEach((ngram) => {
     addToVariantMap(index.ngramIndex, ngram, word);
   });
@@ -141,20 +135,20 @@ function processWordWithProcessor(word, processor, index, config, featureSet) {
     const compoundParts = processor.splitCompoundWords(word);
     compoundParts.forEach((part) => {
       if (part !== word) {
-        addToVariantMap(index.variantToBase, processor.normalize(part), word);
+        addToVariantMap(index.variantToBase, processor.normalize(part).toLowerCase(), word);
       }
     });
   }
   if (featureSet.has("synonyms")) {
     const synonyms = processor.getSynonyms(normalized);
     synonyms.forEach((synonym) => {
-      addToVariantMap(index.synonymMap, synonym, word);
+      addToVariantMap(index.synonymMap, synonym.toLowerCase(), word);
     });
     if (config.customSynonyms) {
-      const customSynonyms = config.customSynonyms[normalized];
+      const customSynonyms = config.customSynonyms[normalized.toLowerCase()];
       if (customSynonyms) {
         customSynonyms.forEach((synonym) => {
-          addToVariantMap(index.synonymMap, synonym, word);
+          addToVariantMap(index.synonymMap, synonym.toLowerCase(), word);
         });
       }
     }
@@ -162,22 +156,18 @@ function processWordWithProcessor(word, processor, index, config, featureSet) {
 }
 function processWordWithProcessorAndField(fieldValue, baseId, fieldName, processor, index, config, featureSet) {
   const normalized = processor.normalize(fieldValue);
-  addToVariantMapWithField(index.variantToBase, normalized, baseId);
-  addToVariantMapWithField(index.variantToBase, fieldValue.toLowerCase(), baseId);
-  addToVariantMapWithField(index.variantToBase, fieldValue, baseId);
+  addToVariantMapWithField(index.variantToBase, normalized.toLowerCase(), baseId);
   const accentFreeWord = removeAccents(fieldValue);
   if (accentFreeWord !== fieldValue) {
-    addToVariantMapWithField(index.variantToBase, accentFreeWord, baseId);
-    addToVariantMapWithField(index.variantToBase, accentFreeWord.toLowerCase(), baseId);
-    const normalizedAccentFree = processor.normalize(accentFreeWord);
-    if (normalizedAccentFree !== accentFreeWord.toLowerCase()) {
+    const normalizedAccentFree = processor.normalize(accentFreeWord).toLowerCase();
+    if (normalizedAccentFree !== normalized.toLowerCase()) {
       addToVariantMapWithField(index.variantToBase, normalizedAccentFree, baseId);
     }
   }
   if (featureSet.has("partial-words")) {
     const variants = processor.getWordVariants(fieldValue, config.performance);
     variants.forEach((variant) => {
-      addToVariantMapWithField(index.variantToBase, variant, baseId);
+      addToVariantMapWithField(index.variantToBase, variant.toLowerCase(), baseId);
     });
   }
   if (featureSet.has("phonetic") && processor.supportedFeatures.includes("phonetic")) {
@@ -188,7 +178,7 @@ function processWordWithProcessorAndField(fieldValue, baseId, fieldName, process
   }
   const shouldLimitNgrams = config.performance === "fast" && normalized.length > 15;
   const ngramSource = shouldLimitNgrams ? normalized.substring(0, 15) : normalized;
-  const ngrams = generateNgrams(ngramSource, config.ngramSize);
+  const ngrams = generateNgrams(ngramSource.toLowerCase(), config.ngramSize);
   ngrams.forEach((ngram) => {
     addToVariantMapWithField(index.ngramIndex, ngram, baseId);
   });
@@ -196,21 +186,20 @@ function processWordWithProcessorAndField(fieldValue, baseId, fieldName, process
     const parts = processor.splitCompoundWords(fieldValue);
     parts.forEach((part) => {
       if (part.length >= config.minQueryLength) {
-        addToVariantMapWithField(index.variantToBase, part, baseId);
-        addToVariantMapWithField(index.variantToBase, processor.normalize(part), baseId);
+        addToVariantMapWithField(index.variantToBase, processor.normalize(part).toLowerCase(), baseId);
       }
     });
   }
   if (featureSet.has("synonyms")) {
     const synonyms = processor.getSynonyms(normalized);
     synonyms.forEach((synonym) => {
-      addToVariantMapWithField(index.synonymMap, synonym, baseId);
+      addToVariantMapWithField(index.synonymMap, synonym.toLowerCase(), baseId);
     });
     if (config.customSynonyms) {
-      const customSynonyms = config.customSynonyms[normalized];
+      const customSynonyms = config.customSynonyms[normalized.toLowerCase()];
       if (customSynonyms) {
         customSynonyms.forEach((synonym) => {
-          addToVariantMapWithField(index.synonymMap, synonym, baseId);
+          addToVariantMapWithField(index.synonymMap, synonym.toLowerCase(), baseId);
         });
       }
     }
@@ -317,7 +306,7 @@ function findExactMatches(query, index, matches, language) {
     }
     return;
   }
-  const exactMatches = index.variantToBase.get(query);
+  const exactMatches = index.variantToBase.get(query.toLowerCase());
   if (exactMatches) {
     exactMatches.forEach((word) => {
       if (wordBoundaries && !matchesWord(word, query, wordBoundaries)) {
@@ -352,8 +341,9 @@ function findExactMatches(query, index, matches, language) {
 }
 function findPrefixMatches(query, index, matches, language) {
   const wordBoundaries = index.config.wordBoundaries || false;
+  const queryLower = query.toLowerCase();
   for (const [variant, words] of index.variantToBase.entries()) {
-    if (variant.startsWith(query) && variant !== query) {
+    if (variant.startsWith(queryLower) && variant !== queryLower) {
       words.forEach((word) => {
         if (wordBoundaries && !matchesWord(word, query, wordBoundaries)) {
           return;
@@ -391,7 +381,7 @@ function findPhoneticMatches(query, processor, index, matches) {
   }
 }
 function findSynonymMatches(query, index, matches) {
-  const synonymMatches = index.synonymMap.get(query);
+  const synonymMatches = index.synonymMap.get(query.toLowerCase());
   if (synonymMatches) {
     synonymMatches.forEach((word) => {
       if (!matches.has(word)) {

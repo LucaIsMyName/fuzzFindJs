@@ -153,71 +153,79 @@ export function buildFuzzyIndex(words: (string | any)[] = [], options: BuildInde
     index.languageProcessors.set(processor.language, processor);
   });
 
+  // OPTIMIZATION 2: Decide early whether to use inverted index to avoid building redundant structures
+  // Use inverted index for large datasets (10k+) or when explicitly requested
+  const shouldUseInvertedIndex = options.useInvertedIndex || config.useInvertedIndex || config.useBM25 || config.useBloomFilter || words.length >= 10000;
+
   const processedWords = new Set<string>();
   let processed = 0;
 
-  for (const item of words) {
-    if (!item) continue;
+  // OPTIMIZATION 2: Only build hash maps if NOT using inverted index
+  // This avoids storing the same data twice in different structures
+  if (!shouldUseInvertedIndex) {
+    for (const item of words) {
+      if (!item) continue;
 
-    // Handle multi-field objects
-    if (hasFields && isObjectArray) {
-      const fieldValues = extractFieldValues(item, options.fields);
-      if (!fieldValues) continue;
+      // Handle multi-field objects
+      if (hasFields && isObjectArray) {
+        const fieldValues = extractFieldValues(item, options.fields);
+        if (!fieldValues) continue;
 
-      // Generate a unique ID for this object (use first field value as base)
-      const baseId = Object.values(fieldValues)[0] || `item_${processed}`;
+        // Generate a unique ID for this object (use first field value as base)
+        const baseId = Object.values(fieldValues)[0] || `item_${processed}`;
 
-      // Store field data
-      index.fieldData!.set(baseId, fieldValues);
+        // Store field data
+        index.fieldData!.set(baseId, fieldValues);
 
-      // Index each field separately
-      for (const [fieldName, fieldValue] of Object.entries(fieldValues)) {
-        if (!fieldValue || fieldValue.trim().length < config.minQueryLength) continue;
+        // Index each field separately
+        for (const [fieldName, fieldValue] of Object.entries(fieldValues)) {
+          if (!fieldValue || fieldValue.trim().length < config.minQueryLength) continue;
 
-        const trimmedValue = fieldValue.trim();
+          const trimmedValue = fieldValue.trim();
 
-        // Add to base if not already there
-        if (!processedWords.has(baseId.toLowerCase())) {
-          processedWords.add(baseId.toLowerCase());
-          index.base.push(baseId);
+          // Add to base if not already there
+          if (!processedWords.has(baseId.toLowerCase())) {
+            processedWords.add(baseId.toLowerCase());
+            index.base.push(baseId);
+          }
+
+          // Process this field value with each language processor
+          for (const processor of languageProcessors) {
+            processWordWithProcessorAndField(trimmedValue, baseId, fieldName, processor, index, config, featureSet);
+          }
         }
+      } else {
+        // Handle simple string array (backwards compatible)
+        const word = typeof item === "string" ? item : String(item);
+        if (word.trim().length < config.minQueryLength) continue;
 
-        // Process this field value with each language processor
+        const trimmedWord = word.trim();
+        if (processedWords.has(trimmedWord.toLowerCase())) continue;
+
+        processedWords.add(trimmedWord.toLowerCase());
+        index.base.push(trimmedWord);
+
+        // Process with each language processor
         for (const processor of languageProcessors) {
-          processWordWithProcessorAndField(trimmedValue, baseId, fieldName, processor, index, config, featureSet);
+          processWordWithProcessor(trimmedWord, processor, index, config, featureSet);
         }
       }
-    } else {
-      // Handle simple string array (backwards compatible)
-      const word = typeof item === "string" ? item : String(item);
-      if (word.trim().length < config.minQueryLength) continue;
 
-      const trimmedWord = word.trim();
-      if (processedWords.has(trimmedWord.toLowerCase())) continue;
-
-      processedWords.add(trimmedWord.toLowerCase());
-      index.base.push(trimmedWord);
-
-      // Process with each language processor
-      for (const processor of languageProcessors) {
-        processWordWithProcessor(trimmedWord, processor, index, config, featureSet);
+      processed++;
+      if (options.onProgress) {
+        options.onProgress(processed, words.length);
       }
-    }
-
-    processed++;
-    if (options.onProgress) {
-      options.onProgress(processed, words.length);
     }
   }
 
-  // INVERTED INDEX: Build if enabled or auto-enable for large datasets
-  // Also force inverted index if BM25 or Bloom Filter is enabled
-  const shouldUseInvertedIndex = options.useInvertedIndex || config.useInvertedIndex || config.useBM25 || config.useBloomFilter || words.length >= 10000;
-
+  // INVERTED INDEX: Build for large datasets (contains all the data we need)
   if (shouldUseInvertedIndex) {
     const { invertedIndex, documents } = buildInvertedIndex(words, languageProcessors, config, featureSet);
     index.invertedIndex = invertedIndex;
     index.documents = documents;
+    
+    // Populate base array from documents for compatibility
+    index.base = documents.map(doc => doc.word);
   }
 
   // CACHE: Initialize search result cache if enabled (default: true)
@@ -235,34 +243,26 @@ export function buildFuzzyIndex(words: (string | any)[] = [], options: BuildInde
  */
 function processWordWithProcessor(word: string, processor: LanguageProcessor, index: FuzzyIndex, config: FuzzyConfig, featureSet: Set<string>): void {
   const normalized = processor.normalize(word);
-  const lowercase = word.toLowerCase();
 
-  // OPTIMIZATION 4: Skip redundant mappings when forms are identical
-  addToVariantMap(index.variantToBase, normalized, word);
-  if (lowercase !== normalized) {
-    addToVariantMap(index.variantToBase, lowercase, word);
-  }
-  if (word !== normalized && word !== lowercase) {
-    addToVariantMap(index.variantToBase, word, word);
-  }
+  // OPTIMIZATION: Store only lowercase normalized form to eliminate duplicates
+  // All case variations (apple, Apple, APPLE) map to same lowercase key
+  addToVariantMap(index.variantToBase, normalized.toLowerCase(), word);
 
-  // Add accent-insensitive variants
+  // Add accent-insensitive variants (also normalized to lowercase)
   const accentFreeWord = removeAccents(word);
   if (accentFreeWord !== word) {
-    // Add the accent-free version in multiple forms
-    addToVariantMap(index.variantToBase, accentFreeWord, word); // Original case
-    addToVariantMap(index.variantToBase, accentFreeWord.toLowerCase(), word); // Lowercase
-    const normalizedAccentFree = processor.normalize(accentFreeWord);
-    if (normalizedAccentFree !== accentFreeWord.toLowerCase()) {
-      addToVariantMap(index.variantToBase, normalizedAccentFree, word); // Processor normalized
+    const normalizedAccentFree = processor.normalize(accentFreeWord).toLowerCase();
+    // Only add if different from the already-stored normalized form
+    if (normalizedAccentFree !== normalized.toLowerCase()) {
+      addToVariantMap(index.variantToBase, normalizedAccentFree, word);
     }
   }
 
-  // Generate and index variants
+  // Generate and index variants (normalized to lowercase)
   if (featureSet.has("partial-words")) {
     const variants = processor.getWordVariants(word, config.performance);
     variants.forEach((variant) => {
-      addToVariantMap(index.variantToBase, variant, word);
+      addToVariantMap(index.variantToBase, variant.toLowerCase(), word);
     });
   }
 
@@ -274,38 +274,38 @@ function processWordWithProcessor(word: string, processor: LanguageProcessor, in
     }
   }
 
-  // Generate n-grams for partial matching
+  // Generate n-grams for partial matching (normalized to lowercase)
   // OPTIMIZATION 3: Limit n-gram generation in fast mode to reduce index size
   const shouldLimitNgrams = config.performance === 'fast' && normalized.length > 15;
   const ngramSource = shouldLimitNgrams ? normalized.substring(0, 15) : normalized;
-  const ngrams = generateNgrams(ngramSource, config.ngramSize);
+  const ngrams = generateNgrams(ngramSource.toLowerCase(), config.ngramSize);
   ngrams.forEach((ngram: string) => {
     addToVariantMap(index.ngramIndex, ngram, word);
   });
 
-  // Handle compound words
+  // Handle compound words (normalized to lowercase)
   if (featureSet.has("compound") && processor.supportedFeatures.includes("compound")) {
     const compoundParts = processor.splitCompoundWords(word);
     compoundParts.forEach((part) => {
       if (part !== word) {
-        addToVariantMap(index.variantToBase, processor.normalize(part), word);
+        addToVariantMap(index.variantToBase, processor.normalize(part).toLowerCase(), word);
       }
     });
   }
 
-  // Add synonyms
+  // Add synonyms (normalized to lowercase)
   if (featureSet.has("synonyms")) {
     const synonyms = processor.getSynonyms(normalized);
     synonyms.forEach((synonym) => {
-      addToVariantMap(index.synonymMap, synonym, word);
+      addToVariantMap(index.synonymMap, synonym.toLowerCase(), word);
     });
 
     // Add custom synonyms
     if (config.customSynonyms) {
-      const customSynonyms = config.customSynonyms[normalized];
+      const customSynonyms = config.customSynonyms[normalized.toLowerCase()];
       if (customSynonyms) {
         customSynonyms.forEach((synonym) => {
-          addToVariantMap(index.synonymMap, synonym, word);
+          addToVariantMap(index.synonymMap, synonym.toLowerCase(), word);
         });
       }
     }
@@ -318,27 +318,23 @@ function processWordWithProcessor(word: string, processor: LanguageProcessor, in
 function processWordWithProcessorAndField(fieldValue: string, baseId: string, fieldName: string, processor: LanguageProcessor, index: FuzzyIndex, config: FuzzyConfig, featureSet: Set<string>): void {
   const normalized = processor.normalize(fieldValue);
 
-  // Add base word mapping with field metadata
-  addToVariantMapWithField(index.variantToBase, normalized, baseId, fieldName);
-  addToVariantMapWithField(index.variantToBase, fieldValue.toLowerCase(), baseId, fieldName);
-  addToVariantMapWithField(index.variantToBase, fieldValue, baseId, fieldName);
+  // OPTIMIZATION: Store only lowercase normalized form to eliminate duplicates
+  addToVariantMapWithField(index.variantToBase, normalized.toLowerCase(), baseId, fieldName);
 
-  // Add accent-insensitive variants
+  // Add accent-insensitive variants (normalized to lowercase)
   const accentFreeWord = removeAccents(fieldValue);
   if (accentFreeWord !== fieldValue) {
-    addToVariantMapWithField(index.variantToBase, accentFreeWord, baseId, fieldName);
-    addToVariantMapWithField(index.variantToBase, accentFreeWord.toLowerCase(), baseId, fieldName);
-    const normalizedAccentFree = processor.normalize(accentFreeWord);
-    if (normalizedAccentFree !== accentFreeWord.toLowerCase()) {
+    const normalizedAccentFree = processor.normalize(accentFreeWord).toLowerCase();
+    if (normalizedAccentFree !== normalized.toLowerCase()) {
       addToVariantMapWithField(index.variantToBase, normalizedAccentFree, baseId, fieldName);
     }
   }
 
-  // Generate and index variants
+  // Generate and index variants (normalized to lowercase)
   if (featureSet.has("partial-words")) {
     const variants = processor.getWordVariants(fieldValue, config.performance);
     variants.forEach((variant) => {
-      addToVariantMapWithField(index.variantToBase, variant, baseId, fieldName);
+      addToVariantMapWithField(index.variantToBase, variant.toLowerCase(), baseId, fieldName);
     });
   }
 
@@ -350,39 +346,38 @@ function processWordWithProcessorAndField(fieldValue: string, baseId: string, fi
     }
   }
 
-  // Generate n-grams for partial matching
+  // Generate n-grams for partial matching (normalized to lowercase)
   // OPTIMIZATION 3: Limit n-gram generation in fast mode to reduce index size
   const shouldLimitNgrams = config.performance === 'fast' && normalized.length > 15;
   const ngramSource = shouldLimitNgrams ? normalized.substring(0, 15) : normalized;
-  const ngrams = generateNgrams(ngramSource, config.ngramSize);
+  const ngrams = generateNgrams(ngramSource.toLowerCase(), config.ngramSize);
   ngrams.forEach((ngram: string) => {
     addToVariantMapWithField(index.ngramIndex, ngram, baseId, fieldName);
   });
 
-  // Handle compound words
+  // Handle compound words (normalized to lowercase)
   if (featureSet.has("compound") && processor.supportedFeatures.includes("compound")) {
     const parts = processor.splitCompoundWords(fieldValue);
     parts.forEach((part) => {
       if (part.length >= config.minQueryLength) {
-        addToVariantMapWithField(index.variantToBase, part, baseId, fieldName);
-        addToVariantMapWithField(index.variantToBase, processor.normalize(part), baseId, fieldName);
+        addToVariantMapWithField(index.variantToBase, processor.normalize(part).toLowerCase(), baseId, fieldName);
       }
     });
   }
 
-  // Add synonyms
+  // Add synonyms (normalized to lowercase)
   if (featureSet.has("synonyms")) {
     const synonyms = processor.getSynonyms(normalized);
     synonyms.forEach((synonym) => {
-      addToVariantMapWithField(index.synonymMap, synonym, baseId, fieldName);
+      addToVariantMapWithField(index.synonymMap, synonym.toLowerCase(), baseId, fieldName);
     });
 
     // Add custom synonyms
     if (config.customSynonyms) {
-      const customSynonyms = config.customSynonyms[normalized];
+      const customSynonyms = config.customSynonyms[normalized.toLowerCase()];
       if (customSynonyms) {
         customSynonyms.forEach((synonym) => {
-          addToVariantMapWithField(index.synonymMap, synonym, baseId, fieldName);
+          addToVariantMapWithField(index.synonymMap, synonym.toLowerCase(), baseId, fieldName);
         });
       }
     }
@@ -627,8 +622,8 @@ function findExactMatches(query: string, index: FuzzyIndex, matches: Map<string,
     return;
   }
 
-  // Check for exact matches in the variant map
-  const exactMatches = index.variantToBase.get(query);
+  // Check for exact matches in the variant map (normalize to lowercase)
+  const exactMatches = index.variantToBase.get(query.toLowerCase());
   if (exactMatches) {
     exactMatches.forEach((word) => {
       // With word boundaries, verify the match
@@ -672,9 +667,10 @@ function findExactMatches(query: string, index: FuzzyIndex, matches: Map<string,
  */
 function findPrefixMatches(query: string, index: FuzzyIndex, matches: Map<string, SearchMatch>, language: string): void {
   const wordBoundaries = index.config.wordBoundaries || false;
+  const queryLower = query.toLowerCase();
 
   for (const [variant, words] of index.variantToBase.entries()) {
-    if (variant.startsWith(query) && variant !== query) {
+    if (variant.startsWith(queryLower) && variant !== queryLower) {
       words.forEach((word) => {
         // With word boundaries, verify the match
         if (wordBoundaries && !matchesWord(word, query, wordBoundaries)) {
@@ -723,7 +719,7 @@ function findPhoneticMatches(query: string, processor: LanguageProcessor, index:
  * Find synonym matches
  */
 function findSynonymMatches(query: string, index: FuzzyIndex, matches: Map<string, SearchMatch>): void {
-  const synonymMatches = index.synonymMap.get(query);
+  const synonymMatches = index.synonymMap.get(query.toLowerCase());
   if (synonymMatches) {
     synonymMatches.forEach((word) => {
       if (!matches.has(word)) {
