@@ -115,7 +115,9 @@ export function detectLanguagesWithConfidence(text: string): LanguageDetectionRe
  * @param sampleSize - Number of items to sample (default: 100)
  * @returns Combined sample text
  */
-export function sampleTextForDetection(words: (string | any)[], sampleSize: number = 100): string {
+export function sampleTextForDetection(
+  //
+  words: (string | any)[], sampleSize: number = 100): string {
   const sample = words.slice(0, Math.min(sampleSize, words.length));
   
   return sample
