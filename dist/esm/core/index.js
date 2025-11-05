@@ -280,17 +280,7 @@ function getSuggestions(index, query, maxResults, options = {}) {
   if (options.sort) {
     results = applySorting(results, options.sort);
   } else {
-    results = results.sort((a, b) => {
-      if (Math.abs(a.score - b.score) > 1e-3) {
-        return b.score - a.score;
-      }
-      const editDistA = a._editDistance ?? Infinity;
-      const editDistB = b._editDistance ?? Infinity;
-      if (editDistA !== editDistB) {
-        return editDistA - editDistB;
-      }
-      return a.display.length - b.display.length;
-    });
+    results = results.sort((a, b) => b.score - a.score);
   }
   results = results.slice(0, limit);
   if (index._cache) {
@@ -462,21 +452,12 @@ function createSuggestionResult(match, originalQuery, threshold, index, options)
   if (score < threshold) {
     return null;
   }
-  let editDistance = match.editDistance;
-  if (editDistance === void 0) {
-    editDistance = calculateLevenshteinDistance(
-      originalQuery.toLowerCase(),
-      match.word.toLowerCase(),
-      Math.ceil(Math.max(originalQuery.length, match.word.length) * 0.5)
-    );
-  }
   const result = {
     display: match.word,
     baseWord: match.word,
     isSynonym: match.matchType === "synonym",
     score,
     language: match.language,
-    _editDistance: editDistance,
     // @ts-ignore - temporary debug property
     _debug_matchType: match.matchType
   };
@@ -493,33 +474,23 @@ function calculateMatchScore(match, query) {
   const queryLen = query.length;
   const wordLen = match.word.length;
   const maxLen = Math.max(queryLen, wordLen);
-  let editDistance = match.editDistance;
-  if (editDistance === void 0) {
-    editDistance = calculateLevenshteinDistance(query.toLowerCase(), match.word.toLowerCase(), Math.ceil(maxLen * 0.5));
-  }
   let score = 0.5;
-  const editDistanceScore = Math.max(0, 1 - editDistance / maxLen);
   switch (match.matchType) {
     case "exact":
       score = 1;
       break;
     case "prefix":
-      const lengthPenalty = Math.max(0, (wordLen - queryLen) / maxLen);
-      score = 0.9 - lengthPenalty * 0.3;
-      if (editDistance <= 2) {
-        score = Math.max(score, editDistanceScore * 0.95);
-      }
+      score = 0.9 - (wordLen - queryLen) / (maxLen * 2);
       break;
     case "substring":
       score = 0.8;
       break;
     case "phonetic":
-      score = Math.max(0.7, editDistanceScore * 0.85);
+      score = 0.7;
       break;
     case "fuzzy":
-      score = Math.max(0.3, editDistanceScore);
-      if (editDistance <= 2) {
-        score = Math.min(1, score + 0.1);
+      if (match.editDistance !== void 0) {
+        score = Math.max(0.3, 1 - match.editDistance / maxLen);
       }
       break;
     case "synonym":
@@ -532,11 +503,8 @@ function calculateMatchScore(match, query) {
       score = calculateNgramSimilarity(query.toLowerCase(), match.normalized, 3) * 0.8;
       break;
   }
-  if (wordLen > queryLen * 2) {
-    score *= 0.6;
-  }
-  if (Math.abs(wordLen - queryLen) <= 2 && match.matchType !== "exact") {
-    score = Math.min(1, score + 0.05);
+  if (wordLen <= queryLen + 2 && match.matchType !== "exact") {
+    score += 0.1;
   }
   return Math.min(1, Math.max(0, score));
 }
