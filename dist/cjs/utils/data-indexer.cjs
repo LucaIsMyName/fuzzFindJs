@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const tokenizer = require("./tokenizer.cjs");
 function dataToIndex(content, options = {}) {
   const {
     //
@@ -38,7 +39,7 @@ function dataToIndex(content, options = {}) {
   }
   let words = [];
   if (splitWords) {
-    words = text.split(/[\s\-_.,;:!?()[\]{}'"\/\\]+/).filter((word) => word.length > 0);
+    words = tokenizer.tokenize(text, { keepEmpty: false });
   } else {
     words = [text];
   }

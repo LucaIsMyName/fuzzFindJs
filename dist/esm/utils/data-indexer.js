@@ -1,3 +1,4 @@
+import { tokenize } from "./tokenizer.js";
 function dataToIndex(content, options = {}) {
   const {
     //
@@ -36,7 +37,7 @@ function dataToIndex(content, options = {}) {
   }
   let words = [];
   if (splitWords) {
-    words = text.split(/[\s\-_.,;:!?()[\]{}'"\/\\]+/).filter((word) => word.length > 0);
+    words = tokenize(text, { keepEmpty: false });
   } else {
     words = [text];
   }

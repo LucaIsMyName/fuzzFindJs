@@ -523,6 +523,11 @@ export function getSuggestions(index: FuzzyIndex, query: string, maxResults?: nu
     processedQuery = filterStopWords(query, config.stopWords);
   }
 
+  // Early return if processed query is empty after filtering
+  if (!processedQuery || processedQuery.trim().length === 0) {
+    return [];
+  }
+
   // CACHE: Check cache first (use processed query for cache key)
   if (index._cache) {
     const cached = index._cache.get(processedQuery, limit, options);

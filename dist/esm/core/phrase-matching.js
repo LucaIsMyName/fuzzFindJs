@@ -1,4 +1,5 @@
 import { calculateDamerauLevenshteinDistance, calculateLevenshteinDistance } from "../algorithms/levenshtein.js";
+import { tokenize } from "../utils/tokenizer.js";
 const DEFAULT_OPTIONS = {
   exactMatch: false,
   maxEditDistance: 1,
@@ -44,8 +45,8 @@ function findExactPhrase(text, phrase) {
   return { matched: false, score: 0, matchType: "none" };
 }
 function findFuzzyPhrase(text, phrase, maxEditDistance, useTranspositions) {
-  const phraseWords = phrase.split(/\s+/);
-  const textWords = text.split(/\s+/);
+  const phraseWords = tokenize(phrase, { lowercase: true });
+  const textWords = tokenize(text, { lowercase: true });
   for (let i = 0; i <= textWords.length - phraseWords.length; i++) {
     const segment = textWords.slice(i, i + phraseWords.length);
     let totalDistance = 0;
@@ -72,8 +73,8 @@ function findFuzzyPhrase(text, phrase, maxEditDistance, useTranspositions) {
   return { matched: false, score: 0, matchType: "none" };
 }
 function findProximityMatch(text, phrase, maxDistance) {
-  const phraseWords = phrase.split(/\s+/);
-  const textWords = text.split(/\s+/);
+  const phraseWords = tokenize(phrase, { lowercase: true });
+  const textWords = tokenize(text, { lowercase: true });
   const positions = phraseWords.map(() => []);
   textWords.forEach((word, index) => {
     phraseWords.forEach((phraseWord, phraseIndex) => {

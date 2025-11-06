@@ -4,6 +4,7 @@ const levenshtein = require("../algorithms/levenshtein.cjs");
 const trie = require("./trie.cjs");
 const bm25 = require("../algorithms/bm25.cjs");
 const bloomFilter = require("../algorithms/bloom-filter.cjs");
+const tokenizer = require("../utils/tokenizer.cjs");
 function buildInvertedIndex(words, languageProcessors, config, featureSet) {
   const documents = [];
   const invertedIndex = {
@@ -41,6 +42,15 @@ function buildInvertedIndex(words, languageProcessors, config, featureSet) {
       const lowerWord = trimmedWord.toLowerCase();
       addToPostingList(invertedIndex.termToPostings, lowerWord, docId);
       invertedIndex.termTrie.insert(lowerWord, [docId]);
+      const tokens = tokenizer.tokenize(trimmedWord, { lowercase: true, minLength: 1 });
+      if (tokens.length > 1) {
+        tokens.forEach((token) => {
+          if (token.length >= config.minQueryLength) {
+            addToPostingList(invertedIndex.termToPostings, token, docId);
+            invertedIndex.termTrie.insert(token, [docId]);
+          }
+        });
+      }
       if (featureSet.has("partial-words")) {
         const variants = processor.getWordVariants(trimmedWord, config.performance);
         variants.forEach((variant) => {

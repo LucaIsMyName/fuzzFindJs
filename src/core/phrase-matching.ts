@@ -3,6 +3,7 @@
  */
 
 import { calculateLevenshteinDistance, calculateDamerauLevenshteinDistance } from "../algorithms/levenshtein.js";
+import { tokenize } from "../utils/tokenizer.js";
 
 export interface PhraseMatchOptions {
   /** Require exact phrase match (no typos) */
@@ -117,8 +118,9 @@ function findFuzzyPhrase(
   maxEditDistance: number,
   useTranspositions: boolean
 ): PhraseMatchResult {
-  const phraseWords = phrase.split(/\s+/);
-  const textWords = text.split(/\s+/);
+  // Use centralized tokenizer for consistent word boundary handling
+  const phraseWords = tokenize(phrase, { lowercase: true });
+  const textWords = tokenize(text, { lowercase: true });
 
   // Try to find consecutive words that match the phrase
   for (let i = 0; i <= textWords.length - phraseWords.length; i++) {
@@ -164,8 +166,9 @@ function findProximityMatch(
   phrase: string,
   maxDistance: number
 ): PhraseMatchResult {
-  const phraseWords = phrase.split(/\s+/);
-  const textWords = text.split(/\s+/);
+  // Use centralized tokenizer for consistent word boundary handling
+  const phraseWords = tokenize(phrase, { lowercase: true });
+  const textWords = tokenize(text, { lowercase: true });
 
   // Find positions of each phrase word in text
   const positions: number[][] = phraseWords.map(() => []);

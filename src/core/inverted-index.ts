@@ -14,6 +14,7 @@ import { generateNgrams, calculateLevenshteinDistance, calculateDamerauLevenshte
 import { Trie } from "./trie.js";
 import { calculateBM25Score, normalizeBM25Score, DEFAULT_BM25_CONFIG, type DocumentStats, type CorpusStats } from "../algorithms/bm25.js";
 import { BloomFilter } from "../algorithms/bloom-filter.js";
+import { tokenize } from "../utils/tokenizer.js";
 
 /**
  * Build inverted index from documents
@@ -75,6 +76,19 @@ export function buildInvertedIndex(
       const lowerWord = trimmedWord.toLowerCase();
       addToPostingList(invertedIndex.termToPostings, lowerWord, docId);
       invertedIndex.termTrie!.insert(lowerWord, [docId]);
+
+      // TOKENIZATION: Index individual tokens from words with special characters
+      // This allows "api_" to match "api_manager_3254" by indexing ["api", "manager", "3254"]
+      const tokens = tokenize(trimmedWord, { lowercase: true, minLength: 1 });
+      if (tokens.length > 1) {
+        // Only tokenize if there are multiple tokens (word contains special chars)
+        tokens.forEach((token) => {
+          if (token.length >= config.minQueryLength) {
+            addToPostingList(invertedIndex.termToPostings, token, docId);
+            invertedIndex.termTrie!.insert(token, [docId]);
+          }
+        });
+      }
 
       // Index word variants (prefixes)
       if (featureSet.has("partial-words")) {

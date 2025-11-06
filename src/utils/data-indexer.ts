@@ -3,6 +3,8 @@
  * Extract unique words from various data formats for fuzzy search indexing
  */
 
+import { tokenize } from "./tokenizer.js";
+
 export interface DataToIndexOptions {
   /** Minimum word length to include (default: 2) */
   minLength?: number;
@@ -107,8 +109,8 @@ export function dataToIndex(
   let words: string[] = [];
 
   if (splitWords) {
-    // Split on whitespace and punctuation
-    words = text.split(/[\s\-_.,;:!?()[\]{}'"\/\\]+/).filter((word) => word.length > 0);
+    // Use centralized tokenizer for consistent word boundary handling
+    words = tokenize(text, { keepEmpty: false });
   } else {
     words = [text];
   }

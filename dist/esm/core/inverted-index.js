@@ -2,6 +2,7 @@ import { generateNgrams, calculateDamerauLevenshteinDistance, calculateLevenshte
 import { Trie } from "./trie.js";
 import { DEFAULT_BM25_CONFIG, calculateBM25Score, normalizeBM25Score } from "../algorithms/bm25.js";
 import { BloomFilter } from "../algorithms/bloom-filter.js";
+import { tokenize } from "../utils/tokenizer.js";
 function buildInvertedIndex(words, languageProcessors, config, featureSet) {
   const documents = [];
   const invertedIndex = {
@@ -39,6 +40,15 @@ function buildInvertedIndex(words, languageProcessors, config, featureSet) {
       const lowerWord = trimmedWord.toLowerCase();
       addToPostingList(invertedIndex.termToPostings, lowerWord, docId);
       invertedIndex.termTrie.insert(lowerWord, [docId]);
+      const tokens = tokenize(trimmedWord, { lowercase: true, minLength: 1 });
+      if (tokens.length > 1) {
+        tokens.forEach((token) => {
+          if (token.length >= config.minQueryLength) {
+            addToPostingList(invertedIndex.termToPostings, token, docId);
+            invertedIndex.termTrie.insert(token, [docId]);
+          }
+        });
+      }
       if (featureSet.has("partial-words")) {
         const variants = processor.getWordVariants(trimmedWord, config.performance);
         variants.forEach((variant) => {

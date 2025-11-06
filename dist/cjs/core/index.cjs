@@ -127,7 +127,7 @@ function processWordWithProcessor(word, processor, index2, config2, featureSet) 
       addToVariantMap(index2.phoneticToBase, phoneticCode, word);
     }
   }
-  const shouldLimitNgrams = config2.performance === "fast" && normalized.length > 15;
+  const shouldLimitNgrams = config2.performance === "fast" && normalized.length > 10;
   const ngramSource = shouldLimitNgrams ? normalized.substring(0, 15) : normalized;
   const ngrams = generateNgrams(ngramSource.toLowerCase(), config2.ngramSize);
   ngrams.forEach((ngram) => {
@@ -244,6 +244,9 @@ function getSuggestions(index2, query, maxResults, options = {}) {
   let processedQuery = query;
   if (config2.enableStopWords && config2.stopWords && config2.stopWords.length > 0) {
     processedQuery = stopWords.filterStopWords(query, config2.stopWords);
+  }
+  if (!processedQuery || processedQuery.trim().length === 0) {
+    return [];
   }
   if (index2._cache) {
     const cached = index2._cache.get(processedQuery, limit, options);
