@@ -476,45 +476,56 @@ function createSuggestionResult(match, originalQuery, threshold, index2, options
   }
   return result;
 }
-function calculateMatchScore(match, query, config2) {
+function calculateMatchScore(match, query, config$1) {
+  const scores = {
+    ...config.DEFAULT_MATCH_TYPE_SCORES,
+    ...config$1?.matchTypeScores || {}
+  };
+  const modifiers = {
+    ...config.DEFAULT_SCORING_MODIFIERS,
+    ...config$1?.scoringModifiers || {}
+  };
   const queryLen = query.length;
   const wordLen = match.word.length;
   const maxLen = Math.max(queryLen, wordLen);
-  let score = 0.5;
+  let score = modifiers.baseScore;
   switch (match.matchType) {
     case "exact":
-      score = 1;
+      score = scores.exact;
       break;
     case "prefix":
-      score = 0.9 - (wordLen - queryLen) / (maxLen * 2);
+      score = scores.prefix;
+      if (modifiers.prefixLengthPenalty) {
+        score -= (wordLen - queryLen) / (maxLen * 2);
+      }
       break;
     case "substring":
-      score = 0.8;
+      score = scores.substring;
       break;
     case "phonetic":
-      score = 0.7;
+      score = scores.phonetic;
       break;
     case "fuzzy":
       if (match.editDistance !== void 0) {
-        if (config2?.enableAlphanumericSegmentation && alphanumericSegmenter.isAlphanumeric(query) && alphanumericSegmenter.isAlphanumeric(match.word)) {
-          score = calculateAlphanumericScore(query, match.word, config2);
+        if (config$1?.enableAlphanumericSegmentation && alphanumericSegmenter.isAlphanumeric(query) && alphanumericSegmenter.isAlphanumeric(match.word)) {
+          score = calculateAlphanumericScore(query, match.word, config$1);
         } else {
-          score = Math.max(0.3, 1 - match.editDistance / maxLen);
+          score = Math.max(scores.fuzzyMin, scores.fuzzy - match.editDistance / maxLen);
         }
       }
       break;
     case "synonym":
-      score = 0.6;
+      score = scores.synonym;
       break;
     case "compound":
-      score = 0.75;
+      score = scores.compound;
       break;
     case "ngram":
-      score = levenshtein.calculateNgramSimilarity(query.toLowerCase(), match.normalized, 3) * 0.8;
+      score = levenshtein.calculateNgramSimilarity(query.toLowerCase(), match.normalized, 3) * scores.ngram;
       break;
   }
-  if (wordLen <= queryLen + 2 && match.matchType !== "exact") {
-    score += 0.1;
+  if (wordLen <= queryLen + modifiers.shortWordMaxDiff && match.matchType !== "exact") {
+    score += modifiers.shortWordBoost;
   }
   return Math.min(1, Math.max(0, score));
 }

@@ -2,7 +2,36 @@ import type {
   //
   FuzzyConfig,
   FuzzyFeature,
+  MatchTypeScores,
+  ScoringModifiers,
 } from "./types.js";
+
+/**
+ * Default match type scores
+ * These values determine the base score for each match type
+ */
+export const DEFAULT_MATCH_TYPE_SCORES: MatchTypeScores = {
+  exact: 1.0,
+  prefix: /*0.9*/ 0.9,
+  substring: /*0.8*/ 0.9,
+  phonetic: /*0.7*/ 0.8,
+  fuzzy: /*1.0*/ 0.9,
+  fuzzyMin: /*0.2*/ 0.25,
+  synonym: /*0.6*/ 0.75,
+  compound: /*0.75*/ 0.9,
+  ngram: /*0.8*/ 0.9,
+};
+
+/**
+ * Default scoring modifiers
+ * These values control additional scoring behavior
+ */
+export const DEFAULT_SCORING_MODIFIERS: ScoringModifiers = {
+  baseScore: 0.6,
+  shortWordBoost: 0.1,
+  shortWordMaxDiff: 3,
+  prefixLengthPenalty: false,
+};
 
 /**
  * Default configuration for FuzzyFindJS
@@ -21,6 +50,8 @@ export const DEFAULT_CONFIG: FuzzyConfig = {
   alphanumericAlphaWeight: 0.7,
   alphanumericNumericWeight: 0.3,
   alphanumericNumericEditDistanceMultiplier: 1.5,
+  matchTypeScores: DEFAULT_MATCH_TYPE_SCORES,
+  scoringModifiers: DEFAULT_SCORING_MODIFIERS,
 };
 
 /**
@@ -34,6 +65,13 @@ export const PERFORMANCE_CONFIGS: Record<string, Partial<FuzzyConfig>> = {
     fuzzyThreshold: 0.9,
     maxResults: 3,
     enableAlphanumericSegmentation: true, // Enabled in fast mode
+    matchTypeScores: {
+      exact: 1.0,
+      prefix: 0.95,      // Higher - prioritize exact/prefix in fast mode
+      substring: 0.7,    // Lower - less important
+      fuzzy: 1.0,
+      fuzzyMin: 0.5,     // Higher minimum - stricter matching
+    },
   },
   balanced: {
     performance: "balanced",
@@ -42,6 +80,7 @@ export const PERFORMANCE_CONFIGS: Record<string, Partial<FuzzyConfig>> = {
     fuzzyThreshold: 0.75,
     maxResults: 5,
     enableAlphanumericSegmentation: true, // Enabled in balanced mode
+    // Uses default scoring
   },
   comprehensive: {
     performance: "comprehensive",
@@ -50,6 +89,11 @@ export const PERFORMANCE_CONFIGS: Record<string, Partial<FuzzyConfig>> = {
     fuzzyThreshold: 0.7,
     maxResults: 10,
     enableAlphanumericSegmentation: true, // Enabled in comprehensive mode
+    matchTypeScores: {
+      phonetic: 0.75,    // Higher - more weight on phonetic
+      synonym: 0.65,     // Higher - more weight on synonyms
+      fuzzyMin: 0.2,     // Lower - more lenient
+    },
   },
 };
 
@@ -104,10 +148,38 @@ export function mergeConfig(userConfig: Partial<FuzzyConfig> = {}): FuzzyConfig 
   if (userConfig.performance && userConfig.performance !== "balanced") {
     const performanceConfig = PERFORMANCE_CONFIGS[userConfig.performance];
     Object.assign(baseConfig, performanceConfig);
+    
+    // Deep merge scoring configs from performance preset
+    if (performanceConfig.matchTypeScores) {
+      baseConfig.matchTypeScores = {
+        ...DEFAULT_MATCH_TYPE_SCORES,
+        ...performanceConfig.matchTypeScores,
+      };
+    }
+    if (performanceConfig.scoringModifiers) {
+      baseConfig.scoringModifiers = {
+        ...DEFAULT_SCORING_MODIFIERS,
+        ...performanceConfig.scoringModifiers,
+      };
+    }
   }
 
   // Apply user overrides
   const mergedConfig = { ...baseConfig, ...userConfig };
+
+  // Deep merge user scoring configs
+  if (userConfig.matchTypeScores) {
+    mergedConfig.matchTypeScores = {
+      ...baseConfig.matchTypeScores,
+      ...userConfig.matchTypeScores,
+    };
+  }
+  if (userConfig.scoringModifiers) {
+    mergedConfig.scoringModifiers = {
+      ...baseConfig.scoringModifiers,
+      ...userConfig.scoringModifiers,
+    };
+  }
 
   // Auto-adjust features based on languages if not explicitly set
   if (!userConfig.features && userConfig.languages) {

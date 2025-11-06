@@ -131,6 +131,8 @@ export {
   DEFAULT_CONFIG,
   PERFORMANCE_CONFIGS,
   mergeConfig,
+  DEFAULT_MATCH_TYPE_SCORES,
+  DEFAULT_SCORING_MODIFIERS,
 } from "./core/config.js";
 
 // Types
@@ -147,6 +149,8 @@ export type {
   SearchOptions,
   DebugInfo,
   SuggestionResultWithDebug,
+  MatchTypeScores,
+  ScoringModifiers,
 } from "./core/types.js";
 
 // Language processors

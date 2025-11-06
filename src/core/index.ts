@@ -12,6 +12,8 @@ import {
   //
   mergeConfig,
   validateConfig,
+  DEFAULT_MATCH_TYPE_SCORES,
+  DEFAULT_SCORING_MODIFIERS,
 } from "./config.js";
 import {
   //
@@ -854,24 +856,38 @@ function calculateMatchScore(
   query: string,
   config?: FuzzyConfig
 ): number {
+  // Get scoring configuration with defaults - merge with defaults to ensure all values are present
+  const scores = {
+    ...DEFAULT_MATCH_TYPE_SCORES,
+    ...(config?.matchTypeScores || {}),
+  };
+  const modifiers = {
+    ...DEFAULT_SCORING_MODIFIERS,
+    ...(config?.scoringModifiers || {}),
+  };
+  
   const queryLen = query.length;
   const wordLen = match.word.length;
   const maxLen = Math.max(queryLen, wordLen);
 
-  let score = 0.5; // Base score
+  let score = modifiers.baseScore;
 
   switch (match.matchType) {
     case "exact":
-      score = 1.0;
+      score = scores.exact;
       break;
     case "prefix":
-      score = 0.9 - (wordLen - queryLen) / (maxLen * 2);
+      score = scores.prefix;
+      // Apply length penalty if enabled
+      if (modifiers.prefixLengthPenalty) {
+        score -= (wordLen - queryLen) / (maxLen * 2);
+      }
       break;
     case "substring":
-      score = 0.8;
+      score = scores.substring;
       break;
     case "phonetic":
-      score = 0.7;
+      score = scores.phonetic;
       break;
     case "fuzzy":
       if (match.editDistance !== undefined) {
@@ -879,25 +895,26 @@ function calculateMatchScore(
         if (config?.enableAlphanumericSegmentation && isAlphanumeric(query) && isAlphanumeric(match.word)) {
           score = calculateAlphanumericScore(query, match.word, config);
         } else {
-          score = Math.max(0.3, 1.0 - match.editDistance / maxLen);
+          score = Math.max(scores.fuzzyMin, scores.fuzzy - match.editDistance / maxLen);
         }
       }
       break;
     case "synonym":
-      score = 0.6;
+      score = scores.synonym;
       break;
     case "compound":
-      score = 0.75;
+      score = scores.compound;
       break;
     case "ngram":
-      score = calculateNgramSimilarity(query.toLowerCase(), match.normalized, 3) * 0.8;
+      score = calculateNgramSimilarity(query.toLowerCase(), match.normalized, 3) * scores.ngram;
       break;
   }
 
-  // Boost score for shorter words (more likely to be what user wants)
-  // But don't boost exact matches - they should stay at 1.0
-  if (wordLen <= queryLen + 2 && match.matchType !== "exact") {
-    score += 0.1;
+  // Apply short word boost if configured
+  // Boost words that are close in length to the query (prefer concise matches)
+  // Don't boost exact matches (already at 1.0) or words much longer than query
+  if (wordLen <= queryLen + modifiers.shortWordMaxDiff && match.matchType !== "exact") {
+    score += modifiers.shortWordBoost;
   }
 
   return Math.min(1.0, Math.max(0.0, score));

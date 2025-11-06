@@ -1,5 +1,46 @@
 "use strict";
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const DEFAULT_MATCH_TYPE_SCORES = {
+  exact: 1,
+  prefix: (
+    /*0.9*/
+    0.85
+  ),
+  substring: (
+    /*0.8*/
+    0.85
+  ),
+  phonetic: (
+    /*0.7*/
+    0.8
+  ),
+  fuzzy: (
+    /*1.0*/
+    0.8
+  ),
+  fuzzyMin: (
+    /*0.2*/
+    0.25
+  ),
+  synonym: (
+    /*0.6*/
+    0.75
+  ),
+  compound: (
+    /*0.75*/
+    0.8
+  ),
+  ngram: (
+    /*0.8*/
+    0.75
+  )
+};
+const DEFAULT_SCORING_MODIFIERS = {
+  baseScore: 0.6,
+  shortWordBoost: 0.1,
+  shortWordMaxDiff: 3,
+  prefixLengthPenalty: false
+};
 const DEFAULT_CONFIG = {
   languages: ["english"],
   features: ["phonetic", "compound", "synonyms", "keyboard-neighbors", "partial-words", "missing-letters", "extra-letters", "transpositions"],
@@ -13,7 +54,9 @@ const DEFAULT_CONFIG = {
   // Enabled by default - opt-out for performance if needed
   alphanumericAlphaWeight: 0.7,
   alphanumericNumericWeight: 0.3,
-  alphanumericNumericEditDistanceMultiplier: 1.5
+  alphanumericNumericEditDistanceMultiplier: 1.5,
+  matchTypeScores: DEFAULT_MATCH_TYPE_SCORES,
+  scoringModifiers: DEFAULT_SCORING_MODIFIERS
 };
 const PERFORMANCE_CONFIGS = {
   fast: {
@@ -22,8 +65,18 @@ const PERFORMANCE_CONFIGS = {
     maxEditDistance: 1,
     fuzzyThreshold: 0.9,
     maxResults: 3,
-    enableAlphanumericSegmentation: true
+    enableAlphanumericSegmentation: true,
     // Enabled in fast mode
+    matchTypeScores: {
+      exact: 1,
+      prefix: 0.95,
+      // Higher - prioritize exact/prefix in fast mode
+      substring: 0.7,
+      // Lower - less important
+      fuzzy: 1,
+      fuzzyMin: 0.5
+      // Higher minimum - stricter matching
+    }
   },
   balanced: {
     performance: "balanced",
@@ -33,6 +86,7 @@ const PERFORMANCE_CONFIGS = {
     maxResults: 5,
     enableAlphanumericSegmentation: true
     // Enabled in balanced mode
+    // Uses default scoring
   },
   comprehensive: {
     performance: "comprehensive",
@@ -40,8 +94,16 @@ const PERFORMANCE_CONFIGS = {
     maxEditDistance: 3,
     fuzzyThreshold: 0.7,
     maxResults: 10,
-    enableAlphanumericSegmentation: true
+    enableAlphanumericSegmentation: true,
     // Enabled in comprehensive mode
+    matchTypeScores: {
+      phonetic: 0.75,
+      // Higher - more weight on phonetic
+      synonym: 0.65,
+      // Higher - more weight on synonyms
+      fuzzyMin: 0.2
+      // Lower - more lenient
+    }
   }
 };
 const LANGUAGE_FEATURES = {
@@ -86,8 +148,32 @@ function mergeConfig(userConfig = {}) {
   if (userConfig.performance && userConfig.performance !== "balanced") {
     const performanceConfig = PERFORMANCE_CONFIGS[userConfig.performance];
     Object.assign(baseConfig, performanceConfig);
+    if (performanceConfig.matchTypeScores) {
+      baseConfig.matchTypeScores = {
+        ...DEFAULT_MATCH_TYPE_SCORES,
+        ...performanceConfig.matchTypeScores
+      };
+    }
+    if (performanceConfig.scoringModifiers) {
+      baseConfig.scoringModifiers = {
+        ...DEFAULT_SCORING_MODIFIERS,
+        ...performanceConfig.scoringModifiers
+      };
+    }
   }
   const mergedConfig = { ...baseConfig, ...userConfig };
+  if (userConfig.matchTypeScores) {
+    mergedConfig.matchTypeScores = {
+      ...baseConfig.matchTypeScores,
+      ...userConfig.matchTypeScores
+    };
+  }
+  if (userConfig.scoringModifiers) {
+    mergedConfig.scoringModifiers = {
+      ...baseConfig.scoringModifiers,
+      ...userConfig.scoringModifiers
+    };
+  }
   if (!userConfig.features && userConfig.languages) {
     const recommendedFeatures = /* @__PURE__ */ new Set();
     for (const lang of userConfig.languages) {
@@ -119,6 +205,8 @@ function validateConfig(config) {
   }
 }
 exports.DEFAULT_CONFIG = DEFAULT_CONFIG;
+exports.DEFAULT_MATCH_TYPE_SCORES = DEFAULT_MATCH_TYPE_SCORES;
+exports.DEFAULT_SCORING_MODIFIERS = DEFAULT_SCORING_MODIFIERS;
 exports.LANGUAGE_FEATURES = LANGUAGE_FEATURES;
 exports.PERFORMANCE_CONFIGS = PERFORMANCE_CONFIGS;
 exports.mergeConfig = mergeConfig;

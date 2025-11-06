@@ -27,8 +27,8 @@ export { parseQuery, hasPhraseSyntax, normalizePhrase, splitPhraseWords, } from 
 export type { ParsedQuery, } from "./utils/phrase-parser.js";
 export { detectLanguages, detectLanguagesWithConfidence, sampleTextForDetection, isValidLanguage, normalizeLanguageCode, } from "./utils/language-detection.js";
 export type { LanguageDetectionResult, } from "./utils/language-detection.js";
-export { DEFAULT_CONFIG, PERFORMANCE_CONFIGS, mergeConfig, } from "./core/config.js";
-export type { FuzzyIndex, FuzzyConfig, SuggestionResult, SearchMatch, MatchType, FuzzyFeature, LanguageProcessor, BuildIndexOptions, SearchOptions, DebugInfo, SuggestionResultWithDebug, } from "./core/types.js";
+export { DEFAULT_CONFIG, PERFORMANCE_CONFIGS, mergeConfig, DEFAULT_MATCH_TYPE_SCORES, DEFAULT_SCORING_MODIFIERS, } from "./core/config.js";
+export type { FuzzyIndex, FuzzyConfig, SuggestionResult, SearchMatch, MatchType, FuzzyFeature, LanguageProcessor, BuildIndexOptions, SearchOptions, DebugInfo, SuggestionResultWithDebug, MatchTypeScores, ScoringModifiers, } from "./core/types.js";
 export { LanguageRegistry, GermanProcessor, EnglishProcessor, SpanishProcessor, FrenchProcessor, BaseLanguageProcessor, } from "./languages/index.js";
 export { calculateLevenshteinDistance, calculateDamerauLevenshteinDistance, calculateNgramSimilarity, distanceToSimilarity, areStringsSimilar, } from "./algorithms/levenshtein.js";
 export { calculateBM25Score, calculateIDF, normalizeBM25Score, combineScores, buildCorpusStats, DEFAULT_BM25_CONFIG, } from "./algorithms/bm25.js";

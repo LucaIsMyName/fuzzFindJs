@@ -1,4 +1,14 @@
-import type { FuzzyConfig, FuzzyFeature } from "./types.js";
+import type { FuzzyConfig, FuzzyFeature, MatchTypeScores, ScoringModifiers } from "./types.js";
+/**
+ * Default match type scores
+ * These values determine the base score for each match type
+ */
+export declare const DEFAULT_MATCH_TYPE_SCORES: MatchTypeScores;
+/**
+ * Default scoring modifiers
+ * These values control additional scoring behavior
+ */
+export declare const DEFAULT_SCORING_MODIFIERS: ScoringModifiers;
 /**
  * Default configuration for FuzzyFindJS
  * Provides sensible defaults that work out of the box

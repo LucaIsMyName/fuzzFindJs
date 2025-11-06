@@ -11,7 +11,7 @@ import { findWordBoundaryMatches, isWordBoundary, matchesAtWordBoundary, matches
 import { dataToIndex, dataToIndexAsync } from "./utils/data-indexer.js";
 import { hasPhraseSyntax, normalizePhrase, parseQuery, splitPhraseWords } from "./utils/phrase-parser.js";
 import { detectLanguages, detectLanguagesWithConfidence, isValidLanguage, normalizeLanguageCode, sampleTextForDetection } from "./utils/language-detection.js";
-import { DEFAULT_CONFIG, PERFORMANCE_CONFIGS, mergeConfig } from "./core/config.js";
+import { DEFAULT_CONFIG, DEFAULT_MATCH_TYPE_SCORES, DEFAULT_SCORING_MODIFIERS, PERFORMANCE_CONFIGS, mergeConfig } from "./core/config.js";
 import { LanguageRegistry } from "./languages/index.js";
 import { areStringsSimilar, calculateDamerauLevenshteinDistance, calculateLevenshteinDistance, calculateNgramSimilarity, distanceToSimilarity } from "./algorithms/levenshtein.js";
 import { DEFAULT_BM25_CONFIG, buildCorpusStats, calculateBM25Score, calculateIDF, combineScores, normalizeBM25Score } from "./algorithms/bm25.js";
@@ -43,6 +43,8 @@ export {
   BloomFilter,
   DEFAULT_BM25_CONFIG,
   DEFAULT_CONFIG,
+  DEFAULT_MATCH_TYPE_SCORES,
+  DEFAULT_SCORING_MODIFIERS,
   DEFAULT_STOP_WORDS,
   EnglishProcessor,
   FrenchProcessor,

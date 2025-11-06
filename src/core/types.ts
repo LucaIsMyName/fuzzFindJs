@@ -122,6 +122,49 @@ export interface FuzzyConfig {
   alphanumericNumericWeight?: number;
   /** Edit distance multiplier for numeric segments (default: 1.5, more lenient) */
   alphanumericNumericEditDistanceMultiplier?: number;
+  /** Match type scoring configuration */
+  matchTypeScores?: Partial<MatchTypeScores>;
+  /** Scoring modifiers for fine-tuning */
+  scoringModifiers?: Partial<ScoringModifiers>;
+}
+
+/**
+ * Scoring weights for different match types
+ * Allows fine-tuning of search relevance
+ */
+export interface MatchTypeScores {
+  /** Exact match score (default: 1.0) */
+  exact: number;
+  /** Prefix match base score (default: 0.9) */
+  prefix: number;
+  /** Substring match score (default: 0.8) */
+  substring: number;
+  /** Phonetic match score (default: 0.7) */
+  phonetic: number;
+  /** Fuzzy match base score before edit distance calculation (default: 1.0) */
+  fuzzy: number;
+  /** Minimum fuzzy match score (default: 0.3) */
+  fuzzyMin: number;
+  /** Synonym match score (default: 0.6) */
+  synonym: number;
+  /** Compound word match score (default: 0.75) */
+  compound: number;
+  /** N-gram similarity multiplier (default: 0.8) */
+  ngram: number;
+}
+
+/**
+ * Additional scoring modifiers for fine-tuning behavior
+ */
+export interface ScoringModifiers {
+  /** Base score for all matches (default: 0.5) */
+  baseScore: number;
+  /** Score boost for short words (default: 0.1) */
+  shortWordBoost: number;
+  /** Maximum character difference for short word boost (default: 2) */
+  shortWordMaxDiff: number;
+  /** Apply length penalty to prefix matches (default: true) */
+  prefixLengthPenalty: boolean;
 }
 
 export type FuzzyFeature =
