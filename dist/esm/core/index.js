@@ -526,7 +526,7 @@ function calculateMatchScore(match, query, config) {
         if (config?.enableAlphanumericSegmentation && isAlphanumeric(query) && isAlphanumeric(match.word)) {
           score = calculateAlphanumericScore(query, match.word, config);
         } else {
-          score = Math.max(scores.fuzzyMin, scores.fuzzy - match.editDistance / maxLen);
+          score = Math.max(scores.fuzzyMin, scores.fuzzy - match.editDistance / maxLen * 0.3);
         }
       }
       break;
@@ -542,6 +542,9 @@ function calculateMatchScore(match, query, config) {
   }
   if (wordLen <= queryLen + modifiers.shortWordMaxDiff && match.matchType !== "exact") {
     score += modifiers.shortWordBoost;
+  }
+  if (match.matchType === "exact") {
+    return Math.min(1, Math.max(0, scores.exact));
   }
   return Math.min(1, Math.max(0, score));
 }

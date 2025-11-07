@@ -8,11 +8,7 @@ import type { MatchHighlight, MatchType, SearchMatch } from "./types.js";
 /**
  * Calculate highlights for a search match
  */
-export function calculateHighlights(
-  match: SearchMatch,
-  query: string,
-  displayText: string
-): MatchHighlight[] {
+export function calculateHighlights(match: SearchMatch, query: string, displayText: string): MatchHighlight[] {
   const highlights: MatchHighlight[] = [];
   const normalizedDisplay = displayText.toLowerCase();
   const normalizedQuery = query.toLowerCase();
@@ -77,11 +73,7 @@ export function calculateHighlights(
 /**
  * Calculate highlights for fuzzy matches using edit distance alignment
  */
-function calculateFuzzyHighlights(
-  query: string,
-  text: string,
-  type: MatchType
-): MatchHighlight[] {
+function calculateFuzzyHighlights(query: string, text: string, type: MatchType): MatchHighlight[] {
   const highlights: MatchHighlight[] = [];
   let queryIdx = 0;
   let textIdx = 0;
@@ -114,10 +106,7 @@ function calculateFuzzyHighlights(
 /**
  * Calculate highlights for n-gram matches
  */
-function calculateNgramHighlights(
-  query: string,
-  text: string
-): MatchHighlight[] {
+function calculateNgramHighlights(query: string, text: string): MatchHighlight[] {
   const highlights: MatchHighlight[] = [];
   const ngramSize = 3;
 
@@ -195,6 +184,7 @@ function getMatchTypePriority(type: MatchType): number {
  * Format highlighted text for HTML rendering
  */
 export function formatHighlightedHTML(
+  //
   text: string,
   highlights: MatchHighlight[],
   className: string = "highlight"
@@ -214,7 +204,7 @@ export function formatHighlightedHTML(
 
     // Add highlighted text
     const highlightedText = text.slice(highlight.start, highlight.end);
-    result += `<mark class="${className} ${className}--${highlight.type}">${escapeHTML(highlightedText)}</mark>`;
+    result += `<mark ${highlight.type === "exact" ? 'data-type="exact"' : ""} class="${className} ${className}--${highlight.type}">${escapeHTML(highlightedText)}</mark>`;
 
     lastEnd = highlight.end;
   }
@@ -237,10 +227,5 @@ function escapeHTML(text: string): string {
     return div.innerHTML;
   }
   // Fallback for Node.js
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }

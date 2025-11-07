@@ -534,34 +534,32 @@ function findFuzzyMatchesInverted(
     candidatesChecked++;
 
     // OPTIMIZATION 3: Enhanced early termination based on match quality and quantity
-    // More aggressive for large datasets and high-quality matches
+    // Less aggressive to ensure better search quality
     const currentMatches = matches.size;
-    const earlyTerminationThreshold = datasetSize > 50000 ? config.maxResults * 2 : config.maxResults * 3;
+    const earlyTerminationThreshold = datasetSize > 50000 ? config.maxResults * 3 : config.maxResults * 5;
     
-    // If we have enough matches, check their quality before terminating
+    // Only consider early termination if we have significantly more matches than needed
     if (currentMatches >= earlyTerminationThreshold) {
       // Calculate minimum edit distance in current matches
       let minEditDistance = maxDistance;
-      let hasHighQualityMatches = false;
+      let hasPerfectMatches = false;
       
       for (const match of matches.values()) {
         if (match.editDistance !== undefined) {
           if (match.editDistance === 0) {
-            // Perfect match found - we can terminate immediately
-            hasHighQualityMatches = true;
+            // Perfect match found - we can terminate early but still need more results
+            hasPerfectMatches = true;
             minEditDistance = 0;
             break;
           } else if (match.editDistance <= 1) {
-            hasHighQualityMatches = true;
             minEditDistance = Math.min(minEditDistance, match.editDistance);
           }
         }
       }
       
-      // Terminate early if we have high-quality matches
-      // More aggressive termination for larger datasets
-      const qualityThreshold = datasetSize > 100000 ? 1 : datasetSize > 50000 ? 2 : 3;
-      if (hasHighQualityMatches && minEditDistance <= qualityThreshold) {
+      // Only terminate early if we have many perfect matches
+      // Much more conservative than before
+      if (hasPerfectMatches && currentMatches >= config.maxResults * 10) {
         break;
       }
     }

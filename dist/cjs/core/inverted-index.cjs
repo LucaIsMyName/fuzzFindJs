@@ -311,24 +311,22 @@ function findFuzzyMatchesInverted(query, invertedIndex, documents, matches, proc
     }
     candidatesChecked++;
     const currentMatches = matches.size;
-    const earlyTerminationThreshold = datasetSize > 5e4 ? config.maxResults * 2 : config.maxResults * 3;
+    const earlyTerminationThreshold = datasetSize > 5e4 ? config.maxResults * 3 : config.maxResults * 5;
     if (currentMatches >= earlyTerminationThreshold) {
       let minEditDistance = maxDistance;
-      let hasHighQualityMatches = false;
+      let hasPerfectMatches = false;
       for (const match of matches.values()) {
         if (match.editDistance !== void 0) {
           if (match.editDistance === 0) {
-            hasHighQualityMatches = true;
+            hasPerfectMatches = true;
             minEditDistance = 0;
             break;
           } else if (match.editDistance <= 1) {
-            hasHighQualityMatches = true;
             minEditDistance = Math.min(minEditDistance, match.editDistance);
           }
         }
       }
-      const qualityThreshold = datasetSize > 1e5 ? 1 : datasetSize > 5e4 ? 2 : 3;
-      if (hasHighQualityMatches && minEditDistance <= qualityThreshold) {
+      if (hasPerfectMatches && currentMatches >= config.maxResults * 10) {
         break;
       }
     }

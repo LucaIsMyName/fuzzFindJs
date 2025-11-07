@@ -2,38 +2,21 @@
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const DEFAULT_MATCH_TYPE_SCORES = {
   exact: 1,
-  prefix: (
-    /*0.9*/
-    0.9
-  ),
-  substring: (
-    /*0.8*/
-    0.9
-  ),
-  phonetic: (
-    /*0.7*/
-    0.8
-  ),
-  fuzzy: (
-    /*1.0*/
-    0.9
-  ),
-  fuzzyMin: (
-    /*0.2*/
-    0.25
-  ),
-  synonym: (
-    /*0.6*/
-    0.75
-  ),
-  compound: (
-    /*0.75*/
-    0.9
-  ),
-  ngram: (
-    /*0.8*/
-    0.9
-  )
+  prefix: 0.9,
+  substring: 0.85,
+  // Slightly lower than prefix
+  phonetic: 0.8,
+  // Slightly lower
+  fuzzy: 0.9,
+  // High base score but will be penalized by distance
+  fuzzyMin: 0.3,
+  // Not too low
+  synonym: 0.75,
+  // Good score for synonyms
+  compound: 0.9,
+  // Good score for compound words
+  ngram: 0.8
+  // Good score for n-gram matching
 };
 const DEFAULT_SCORING_MODIFIERS = {
   baseScore: 0.6,

@@ -913,6 +913,7 @@ function calculateMatchScore(
       break;
     case "substring":
       score = scores.substring;
+      // No position penalty for now - keep it simple
       break;
     case "phonetic":
       score = scores.phonetic;
@@ -923,7 +924,8 @@ function calculateMatchScore(
         if (config?.enableAlphanumericSegmentation && isAlphanumeric(query) && isAlphanumeric(match.word)) {
           score = calculateAlphanumericScore(query, match.word, config);
         } else {
-          score = Math.max(scores.fuzzyMin, scores.fuzzy - match.editDistance / maxLen);
+          // Simple linear penalty for edit distance
+          score = Math.max(scores.fuzzyMin, scores.fuzzy - (match.editDistance / maxLen) * 0.3);
         }
       }
       break;
@@ -943,6 +945,11 @@ function calculateMatchScore(
   // Don't boost exact matches (already at 1.0) or words much longer than query
   if (wordLen <= queryLen + modifiers.shortWordMaxDiff && match.matchType !== "exact") {
     score += modifiers.shortWordBoost;
+  }
+
+  // Exact matches should use the configured score, defaulting to 1.0
+  if (match.matchType === "exact") {
+    return Math.min(1.0, Math.max(0.0, scores.exact)); // Clamp to [0, 1] range
   }
 
   return Math.min(1.0, Math.max(0.0, score));

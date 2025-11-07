@@ -88,4 +88,38 @@ describe("FuzzyFindJS Basic Tests", () => {
     expect(results.length).toBeGreaterThan(0);
     expect(results[0].display).toBe("Schule");
   });
+
+  it("should have improved scoring with better differentiation", () => {
+    const testWords = [
+      "servicehandler", "servicehelper", "service_pfcqa", "api_stevg",
+      "clientmanager", "clientutil", "datafactory", "webhandler"
+    ];
+
+    const index = buildFuzzyIndex(testWords, {
+      config: { useInvertedIndex: true },
+    });
+
+    // Test substring scoring - should find some results
+    const icehResults = getSuggestions(index, "iceh", 5);
+    expect(icehResults.length).toBeGreaterThan(0);
+
+    // Results should have reasonable scores
+    const topResult = icehResults[0];
+    expect(topResult.score).toBeGreaterThan(0.5); // Should still find decent matches
+
+    // Test exact match gets highest score
+    const serviceResults = getSuggestions(index, "servicehandler", 3);
+    const exactMatch = serviceResults.find((r) => r.display === "servicehandler");
+    expect(exactMatch).toBeDefined();
+    expect(exactMatch!.score).toBeGreaterThan(0.85); // Should be very high for exact match
+
+    // Test fuzzy scoring still works but with appropriate penalties
+    const stemResults = getSuggestions(index, "stem", 5);
+    expect(stemResults.length).toBeGreaterThan(0);
+    // Results should have scores that reflect fuzzy matching
+    stemResults.forEach((result) => {
+      expect(result.score).toBeGreaterThan(0.2); // Should not be too low
+      expect(result.score).toBeLessThanOrEqual(1.0); // Should not exceed perfect
+    });
+  });
 });
