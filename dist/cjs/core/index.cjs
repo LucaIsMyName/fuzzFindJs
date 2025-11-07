@@ -271,12 +271,30 @@ function getSuggestions(index2, query, maxResults, options = {}) {
   for (const processor of processors) {
     const normalizedQuery = processor.normalize(processedQuery.trim());
     findExactMatches(normalizedQuery, index2, matches, processor.language);
+    const exactMatches = Array.from(matches.values()).filter((m) => m.matchType === "exact");
+    if (exactMatches.length >= limit && exactMatches.some((m) => m.word === normalizedQuery)) {
+      break;
+    }
     findPrefixMatches(normalizedQuery, index2, matches, processor.language);
-    findPhoneticMatches(normalizedQuery, processor, index2, matches);
-    findSynonymMatches(normalizedQuery, index2, matches);
-    findNgramMatches(normalizedQuery, index2, matches, processor.language, config2.ngramSize);
-    if (config2.features.includes("missing-letters") || config2.features.includes("extra-letters") || config2.features.includes("transpositions")) {
-      findFuzzyMatches(normalizedQuery, index2, matches, processor, config2);
+    const highQualityMatches = Array.from(matches.values()).filter(
+      (m) => m.matchType === "exact" || m.matchType === "prefix"
+    );
+    if (highQualityMatches.length >= limit * 2) {
+      findPhoneticMatches(normalizedQuery, processor, index2, matches);
+      findSynonymMatches(normalizedQuery, index2, matches);
+      if (matches.size < limit * 3) {
+        findNgramMatches(normalizedQuery, index2, matches, processor.language, config2.ngramSize);
+        if (config2.features.includes("missing-letters") || config2.features.includes("extra-letters") || config2.features.includes("transpositions")) {
+          findFuzzyMatches(normalizedQuery, index2, matches, processor, config2);
+        }
+      }
+    } else {
+      findPhoneticMatches(normalizedQuery, processor, index2, matches);
+      findSynonymMatches(normalizedQuery, index2, matches);
+      findNgramMatches(normalizedQuery, index2, matches, processor.language, config2.ngramSize);
+      if (config2.features.includes("missing-letters") || config2.features.includes("extra-letters") || config2.features.includes("transpositions")) {
+        findFuzzyMatches(normalizedQuery, index2, matches, processor, config2);
+      }
     }
   }
   let results = Array.from(matches.values()).map((match) => createSuggestionResult(match, processedQuery, threshold, index2, options)).filter((result) => result !== null);

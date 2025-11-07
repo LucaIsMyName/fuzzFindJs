@@ -248,13 +248,19 @@ function addToPostingList(
 ): void {
   let posting = postings.get(term);
   if (!posting) {
-    posting = { term, docIds: [] };
+    posting = { term, docIds: [], docIdSet: new Set() };
     postings.set(term, posting);
   }
 
-  // Avoid duplicates
-  if (!posting.docIds.includes(docId)) {
+  // Initialize docIdSet if not present (for backward compatibility)
+  if (!posting.docIdSet) {
+    posting.docIdSet = new Set(posting.docIds);
+  }
+
+  // Avoid duplicates using O(1) Set lookup
+  if (!posting.docIdSet.has(docId)) {
     posting.docIds.push(docId);
+    posting.docIdSet.add(docId);
   }
 }
 
@@ -527,11 +533,37 @@ function findFuzzyMatchesInverted(
     }
     candidatesChecked++;
 
-    // OPTIMIZATION 3: Early termination if we have enough high-quality matches
-    // More aggressive for large datasets
+    // OPTIMIZATION 3: Enhanced early termination based on match quality and quantity
+    // More aggressive for large datasets and high-quality matches
+    const currentMatches = matches.size;
     const earlyTerminationThreshold = datasetSize > 50000 ? config.maxResults * 2 : config.maxResults * 3;
-    if (matches.size >= earlyTerminationThreshold) {
-      break;
+    
+    // If we have enough matches, check their quality before terminating
+    if (currentMatches >= earlyTerminationThreshold) {
+      // Calculate minimum edit distance in current matches
+      let minEditDistance = maxDistance;
+      let hasHighQualityMatches = false;
+      
+      for (const match of matches.values()) {
+        if (match.editDistance !== undefined) {
+          if (match.editDistance === 0) {
+            // Perfect match found - we can terminate immediately
+            hasHighQualityMatches = true;
+            minEditDistance = 0;
+            break;
+          } else if (match.editDistance <= 1) {
+            hasHighQualityMatches = true;
+            minEditDistance = Math.min(minEditDistance, match.editDistance);
+          }
+        }
+      }
+      
+      // Terminate early if we have high-quality matches
+      // More aggressive termination for larger datasets
+      const qualityThreshold = datasetSize > 100000 ? 1 : datasetSize > 50000 ? 2 : 3;
+      if (hasHighQualityMatches && minEditDistance <= qualityThreshold) {
+        break;
+      }
     }
 
     // OPTIMIZATION 4: Skip if first character is too different (cheap check)

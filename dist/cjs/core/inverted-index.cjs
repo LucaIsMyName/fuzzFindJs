@@ -143,11 +143,15 @@ function searchInvertedIndex(invertedIndex, documents, query, processors, config
 function addToPostingList(postings, term, docId) {
   let posting = postings.get(term);
   if (!posting) {
-    posting = { term, docIds: [] };
+    posting = { term, docIds: [], docIdSet: /* @__PURE__ */ new Set() };
     postings.set(term, posting);
   }
-  if (!posting.docIds.includes(docId)) {
+  if (!posting.docIdSet) {
+    posting.docIdSet = new Set(posting.docIds);
+  }
+  if (!posting.docIdSet.has(docId)) {
     posting.docIds.push(docId);
+    posting.docIdSet.add(docId);
   }
 }
 function findExactMatchesInverted(query, invertedIndex, documents, matches, language) {
@@ -306,9 +310,27 @@ function findFuzzyMatchesInverted(query, invertedIndex, documents, matches, proc
       break;
     }
     candidatesChecked++;
+    const currentMatches = matches.size;
     const earlyTerminationThreshold = datasetSize > 5e4 ? config.maxResults * 2 : config.maxResults * 3;
-    if (matches.size >= earlyTerminationThreshold) {
-      break;
+    if (currentMatches >= earlyTerminationThreshold) {
+      let minEditDistance = maxDistance;
+      let hasHighQualityMatches = false;
+      for (const match of matches.values()) {
+        if (match.editDistance !== void 0) {
+          if (match.editDistance === 0) {
+            hasHighQualityMatches = true;
+            minEditDistance = 0;
+            break;
+          } else if (match.editDistance <= 1) {
+            hasHighQualityMatches = true;
+            minEditDistance = Math.min(minEditDistance, match.editDistance);
+          }
+        }
+      }
+      const qualityThreshold = datasetSize > 1e5 ? 1 : datasetSize > 5e4 ? 2 : 3;
+      if (hasHighQualityMatches && minEditDistance <= qualityThreshold) {
+        break;
+      }
     }
     if (query.length > 0 && term.length > 0) {
       const firstCharDiff = Math.abs(query.charCodeAt(0) - term.charCodeAt(0));

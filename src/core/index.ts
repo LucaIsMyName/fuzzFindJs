@@ -566,13 +566,41 @@ export function getSuggestions(index: FuzzyIndex, query: string, maxResults?: nu
 
     // Find matches using different strategies
     findExactMatches(normalizedQuery, index, matches, processor.language);
+    
+    // Early termination: If we found perfect exact matches and have enough results
+    const exactMatches = Array.from(matches.values()).filter(m => m.matchType === 'exact');
+    if (exactMatches.length >= limit && exactMatches.some(m => m.word === normalizedQuery)) {
+      break; // Perfect match found, no need for other strategies
+    }
+    
     findPrefixMatches(normalizedQuery, index, matches, processor.language);
-    findPhoneticMatches(normalizedQuery, processor, index, matches);
-    findSynonymMatches(normalizedQuery, index, matches);
-    findNgramMatches(normalizedQuery, index, matches, processor.language, config.ngramSize);
+    
+    // Early termination: If we have enough high-quality matches (exact + prefix)
+    const highQualityMatches = Array.from(matches.values()).filter(m => 
+      m.matchType === 'exact' || m.matchType === 'prefix'
+    );
+    if (highQualityMatches.length >= limit * 2) {
+      // Continue with other strategies but be more selective
+      findPhoneticMatches(normalizedQuery, processor, index, matches);
+      findSynonymMatches(normalizedQuery, index, matches);
+      
+      // Only add n-gram and fuzzy if we still need more results
+      if (matches.size < limit * 3) {
+        findNgramMatches(normalizedQuery, index, matches, processor.language, config.ngramSize);
 
-    if (config.features.includes("missing-letters") || config.features.includes("extra-letters") || config.features.includes("transpositions")) {
-      findFuzzyMatches(normalizedQuery, index, matches, processor, config);
+        if (config.features.includes("missing-letters") || config.features.includes("extra-letters") || config.features.includes("transpositions")) {
+          findFuzzyMatches(normalizedQuery, index, matches, processor, config);
+        }
+      }
+    } else {
+      // Normal flow when we don't have enough matches yet
+      findPhoneticMatches(normalizedQuery, processor, index, matches);
+      findSynonymMatches(normalizedQuery, index, matches);
+      findNgramMatches(normalizedQuery, index, matches, processor.language, config.ngramSize);
+
+      if (config.features.includes("missing-letters") || config.features.includes("extra-letters") || config.features.includes("transpositions")) {
+        findFuzzyMatches(normalizedQuery, index, matches, processor, config);
+      }
     }
   }
 

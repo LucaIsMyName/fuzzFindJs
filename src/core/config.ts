@@ -12,14 +12,14 @@ import type {
  */
 export const DEFAULT_MATCH_TYPE_SCORES: MatchTypeScores = {
   exact: 1.0,
-  prefix: /*0.9*/ 0.9,
-  substring: /*0.8*/ 0.9,
-  phonetic: /*0.7*/ 0.8,
-  fuzzy: /*1.0*/ 0.9,
-  fuzzyMin: /*0.2*/ 0.25,
-  synonym: /*0.6*/ 0.75,
-  compound: /*0.75*/ 0.9,
-  ngram: /*0.8*/ 0.9,
+  prefix: 0.85,        // Slightly lower than exact
+  substring: 0.7,      // Much lower - substring is less valuable than prefix
+  phonetic: 0.6,       // Lower - phonetic matches are less precise
+  fuzzy: 0.8,          // Base fuzzy score, but will be penalized by edit distance
+  fuzzyMin: 0.1,       // Much lower minimum for poor fuzzy matches
+  synonym: 0.65,       // Lower than direct matches
+  compound: 0.75,      // Good but not as good as prefix
+  ngram: 0.5,          // Much lower - n-gram alone shouldn't score high
 };
 
 /**
