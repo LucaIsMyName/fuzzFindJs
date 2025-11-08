@@ -370,43 +370,62 @@ function calculateMatchScore(match, query, config) {
   const queryLen = query.length;
   const wordLen = match.word.length;
   const maxLen = Math.max(queryLen, wordLen);
+  const minLen = Math.min(queryLen, wordLen);
   let score = modifiers.baseScore;
   switch (match.matchType) {
     case "exact":
       score = scores.exact;
       break;
     case "prefix":
-      score = scores.prefix;
-      if (modifiers.prefixLengthPenalty) {
-        score -= (wordLen - queryLen) / (maxLen * 2);
+      const lengthRatio = queryLen / wordLen;
+      const basePrefix = scores.prefix;
+      score = basePrefix * (0.2 + 0.8 * lengthRatio);
+      if (wordLen - queryLen <= 3) {
+        score = Math.min(1, score + 0.08);
       }
       break;
     case "substring":
-      score = scores.substring;
       const substringPos = match.normalized.toLowerCase().indexOf(query.toLowerCase());
+      const baseSubstring = scores.substring;
       if (substringPos !== -1) {
         const relativePos = substringPos / match.normalized.length;
-        const positionPenalty = 0.3 * Math.pow(relativePos, 2);
-        score -= positionPenalty;
+        const coverage = queryLen / wordLen;
+        const positionPenalty = 0.5 * Math.pow(relativePos, 3);
+        score = baseSubstring * (0.4 + 0.6 * coverage) - positionPenalty;
+      } else {
+        score = baseSubstring * 0.5;
       }
       break;
     case "phonetic":
-      score = scores.phonetic;
+      const phoneticLengthRatio = minLen / maxLen;
+      score = scores.phonetic * (0.5 + 0.5 * phoneticLengthRatio);
       break;
     case "fuzzy":
       if (match.editDistance !== void 0) {
         if (config?.enableAlphanumericSegmentation && isAlphanumeric(query) && isAlphanumeric(match.word)) {
           score = calculateAlphanumericScore(query, match.word, config);
         } else {
-          score = Math.max(scores.fuzzyMin, scores.fuzzy - match.editDistance / maxLen * 0.3);
+          const editRatio = match.editDistance / maxLen;
+          const lengthSimilarity = minLen / maxLen;
+          score = Math.max(
+            scores.fuzzyMin,
+            scores.fuzzy * lengthSimilarity * (1 - editRatio * 1.5)
+          );
+          if (maxLen <= 4 && match.editDistance <= 1) {
+            score = Math.min(1, score + 0.15);
+          } else if (maxLen <= 4 && match.editDistance <= 2) {
+            score = Math.min(1, score + 0.08);
+          }
         }
       }
       break;
     case "synonym":
-      score = scores.synonym;
+      const synonymLengthRatio = minLen / maxLen;
+      score = scores.synonym * (0.6 + 0.4 * synonymLengthRatio);
       break;
     case "compound":
-      score = scores.compound;
+      const compoundLengthRatio = minLen / maxLen;
+      score = scores.compound * (0.7 + 0.3 * compoundLengthRatio);
       break;
     case "ngram":
       score = calculateNgramSimilarity(query.toLowerCase(), match.normalized, 3) * scores.ngram;

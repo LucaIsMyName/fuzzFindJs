@@ -708,6 +708,7 @@ function createSuggestionResult(match: SearchMatch, originalQuery: string, thres
 
 /**
  * Calculate match score (0-1, higher is better)
+ * Enhanced scoring with better granularity and differentiation
  */
 function calculateMatchScore(
   //
@@ -728,6 +729,7 @@ function calculateMatchScore(
   const queryLen = query.length;
   const wordLen = match.word.length;
   const maxLen = Math.max(queryLen, wordLen);
+  const minLen = Math.min(queryLen, wordLen);
 
   let score = modifiers.baseScore;
 
@@ -735,45 +737,99 @@ function calculateMatchScore(
     case "exact":
       score = scores.exact;
       break;
+      
     case "prefix":
-      score = scores.prefix;
-      // Apply length penalty if enabled
-      if (modifiers.prefixLengthPenalty) {
-        score -= (wordLen - queryLen) / (maxLen * 2);
+      // Length-aware prefix scoring: better scores for closer length matches
+      const lengthRatio = queryLen / wordLen;
+      const basePrefix = scores.prefix;
+      
+      // Scale score based on how much of the word the query covers
+      // Query "New Yor" vs "New York" (7/8 = 0.875) should score ~0.95
+      // Query "util_c" vs "util_controller_340" (6/21 = 0.29) should score ~0.65
+      // Use a more aggressive curve: 0.2 + 0.8 * ratio for better differentiation
+      score = basePrefix * (0.2 + 0.8 * lengthRatio);
+      
+      // Additional boost for very close length matches (within 1-3 chars)
+      if (wordLen - queryLen <= 3) {
+        score = Math.min(1.0, score + 0.08);
       }
       break;
+      
     case "substring":
-      score = scores.substring;
-      // Penalize substring matches that appear later in the word
+      // Position-aware substring scoring with aggressive penalties
       const substringPos = match.normalized.toLowerCase().indexOf(query.toLowerCase());
+      const baseSubstring = scores.substring;
+      
       if (substringPos !== -1) {
         const relativePos = substringPos / match.normalized.length;
-        // Exponential penalty for late positions - more aggressive for very late matches
-        // Early (0-30%): minimal penalty, Late (30-70%): moderate, Very late (70%+): heavy
-        const positionPenalty = 0.30 * Math.pow(relativePos, 2.0);
-        score -= positionPenalty;
+        
+        // Coverage: how much of the word does the query represent?
+        const coverage = queryLen / wordLen;
+        
+        // Position penalty: cubic function for more aggressive late-match penalty
+        // Position 0%: no penalty
+        // Position 30%: ~2.7% penalty
+        // Position 50%: ~12.5% penalty
+        // Position 70%: ~34% penalty
+        // Position 90%: ~73% penalty
+        const positionPenalty = 0.50 * Math.pow(relativePos, 3.0);
+        
+        // Start with base score, apply coverage boost, then position penalty
+        score = baseSubstring * (0.4 + 0.6 * coverage) - positionPenalty;
+      } else {
+        score = baseSubstring * 0.5; // Fallback if position not found
       }
       break;
+      
     case "phonetic":
-      score = scores.phonetic;
+      // Phonetic matches should consider length similarity
+      const phoneticLengthRatio = minLen / maxLen;
+      score = scores.phonetic * (0.5 + 0.5 * phoneticLengthRatio);
       break;
+      
     case "fuzzy":
       if (match.editDistance !== undefined) {
         // Use segment-aware scoring for alphanumeric strings if enabled
         if (config?.enableAlphanumericSegmentation && isAlphanumeric(query) && isAlphanumeric(match.word)) {
           score = calculateAlphanumericScore(query, match.word, config);
         } else {
-          // Simple linear penalty for edit distance
-          score = Math.max(scores.fuzzyMin, scores.fuzzy - (match.editDistance / maxLen) * 0.3);
+          // Enhanced fuzzy scoring based on edit distance ratio
+          const editRatio = match.editDistance / maxLen;
+          const lengthSimilarity = minLen / maxLen;
+          
+          // Better formula: penalize edit distance more heavily
+          // editRatio 0.0 (perfect): score = fuzzy base (0.65)
+          // editRatio 0.1: score ~0.58
+          // editRatio 0.2: score ~0.50
+          // editRatio 0.3+: score approaches fuzzyMin
+          score = Math.max(
+            scores.fuzzyMin,
+            scores.fuzzy * lengthSimilarity * (1.0 - editRatio * 1.5)
+          );
+          
+          // SHORT WORD BOOST: For very short words (≤4 chars), boost fuzzy scores
+          // This ensures "teh"→"the", "cat"→"act" score above threshold (0.33)
+          if (maxLen <= 4 && match.editDistance <= 1) {
+            score = Math.min(1.0, score + 0.15); // Boost by 0.15 for 1-edit short words
+          } else if (maxLen <= 4 && match.editDistance <= 2) {
+            score = Math.min(1.0, score + 0.08); // Smaller boost for 2-edit short words
+          }
         }
       }
       break;
+      
     case "synonym":
-      score = scores.synonym;
+      // Synonyms should also consider length similarity
+      const synonymLengthRatio = minLen / maxLen;
+      score = scores.synonym * (0.6 + 0.4 * synonymLengthRatio);
       break;
+      
     case "compound":
-      score = scores.compound;
+      // Compound matches get a boost for length similarity
+      const compoundLengthRatio = minLen / maxLen;
+      score = scores.compound * (0.7 + 0.3 * compoundLengthRatio);
       break;
+      
     case "ngram":
       score = calculateNgramSimilarity(query.toLowerCase(), match.normalized, 3) * scores.ngram;
       break;

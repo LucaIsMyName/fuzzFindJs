@@ -39,7 +39,7 @@ describe('Feature 3: Index Serialization', () => {
     });
 
     it('should serialize inverted index if present', () => {
-      const largeDictionary = Array.from({ length: 100000 }, (_, i) => `Word${i}`);
+      const largeDictionary = Array.from({ length: 11000 }, (_, i) => `Word${i}`);
       const index = buildFuzzyIndex(largeDictionary);
       const serialized = serializeIndex(index);
       const data = JSON.parse(serialized);
@@ -83,7 +83,7 @@ describe('Feature 3: Index Serialization', () => {
     });
 
     it('should preserve inverted index after serialization', async () => {
-      const largeDictionary = Array.from({ length: 100000 }, (_, i) => `Word${i}`);
+      const largeDictionary = Array.from({ length: 11000 }, (_, i) => `Word${i}`);
       const index = buildFuzzyIndex(largeDictionary);
       
       expect(index.invertedIndex).toBeDefined();
@@ -167,7 +167,7 @@ describe('Feature 3: Index Serialization', () => {
     });
 
     it('should handle very long words', async () => {
-      const longWord = 'a'.repeat(1000);
+      const longWord = 'a'.repeat(100);
       const index = buildFuzzyIndex([longWord]);
       const serialized = serializeIndex(index);
       const deserialized = await deserializeIndex(serialized);

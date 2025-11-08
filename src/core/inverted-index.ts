@@ -534,13 +534,13 @@ function findFuzzyMatchesInverted(
     // Less aggressive to ensure better search quality
     const currentMatches = matches.size;
     const earlyTerminationThreshold = datasetSize > 50000 ? config.maxResults * 3 : config.maxResults * 5;
-    
+
     // Only consider early termination if we have significantly more matches than needed
     if (currentMatches >= earlyTerminationThreshold) {
       // Calculate minimum edit distance in current matches
       let minEditDistance = maxDistance;
       let hasPerfectMatches = false;
-      
+
       for (const match of matches.values()) {
         if (match.editDistance !== undefined) {
           if (match.editDistance === 0) {
@@ -553,7 +553,7 @@ function findFuzzyMatchesInverted(
           }
         }
       }
-      
+
       // Only terminate early if we have many perfect matches
       // Much more conservative than before
       if (hasPerfectMatches && currentMatches >= config.maxResults * 10) {
@@ -579,8 +579,9 @@ function findFuzzyMatchesInverted(
         if (!doc) return;
 
         const existingMatch = matches.get(docId);
-        // Only update if this is a better match (lower edit distance)
-        if (!existingMatch || (existingMatch.editDistance || Infinity) > distance) {
+        // Don't replace exact or prefix matches with fuzzy matches
+        // Only update if this is a better fuzzy match (lower edit distance)
+        if (!existingMatch || (existingMatch.matchType !== "exact" && existingMatch.matchType !== "prefix" && (existingMatch.editDistance || Infinity) > distance)) {
           matches.set(docId, {
             word: doc.word,
             normalized: term,

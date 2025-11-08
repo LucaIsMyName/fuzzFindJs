@@ -2,7 +2,7 @@ import type { FuzzyConfig, FuzzyFeature, MatchTypeScores, ScoringModifiers } fro
 /**
  * Default match type scores
  * These values determine the base score for each match type
- * Updated to provide more granular scoring like Fuse.js
+ * Updated to provide more granular scoring with better differentiation
  */
 export declare const DEFAULT_MATCH_TYPE_SCORES: MatchTypeScores;
 /**

@@ -8,7 +8,12 @@ import type { MatchHighlight, MatchType, SearchMatch } from "./types.js";
 /**
  * Calculate highlights for a search match
  */
-export function calculateHighlights(match: SearchMatch, query: string, displayText: string): MatchHighlight[] {
+export function calculateHighlights(
+  //
+  match: SearchMatch,
+  query: string,
+  displayText: string
+): MatchHighlight[] {
   const highlights: MatchHighlight[] = [];
   const normalizedDisplay = displayText.toLowerCase();
   const normalizedQuery = query.toLowerCase();

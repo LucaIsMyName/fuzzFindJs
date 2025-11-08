@@ -1,4 +1,4 @@
-import { buildFuzzyIndex, getSuggestions } from './dist/esm/index.js';
+import { buildFuzzyIndex, getSuggestions } from '../dist/esm/index.js';
 
 console.log('\n🔍 Testing Substring Match Improvements');
 console.log('='.repeat(60));

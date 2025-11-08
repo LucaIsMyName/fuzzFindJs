@@ -1,4 +1,4 @@
-import { buildFuzzyIndex, getSuggestions } from './dist/esm/index.js';
+import { buildFuzzyIndex, getSuggestions } from '../dist/esm/index.js';
 
 console.log('\n' + '='.repeat(70));
 console.log('🚀 Phase 1 Optimization Tests');

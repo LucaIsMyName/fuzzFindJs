@@ -337,7 +337,7 @@ function findFuzzyMatchesInverted(query, invertedIndex, documents, matches, proc
         const doc = documents[docId];
         if (!doc) return;
         const existingMatch = matches.get(docId);
-        if (!existingMatch || (existingMatch.editDistance || Infinity) > distance) {
+        if (!existingMatch || existingMatch.matchType !== "exact" && existingMatch.matchType !== "prefix" && (existingMatch.editDistance || Infinity) > distance) {
           matches.set(docId, {
             word: doc.word,
             normalized: term,

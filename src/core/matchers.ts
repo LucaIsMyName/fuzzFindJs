@@ -204,27 +204,42 @@ export function findNgramMatches(query: string, index: FuzzyIndex, matches: Map<
  * Find fuzzy matches using edit distance
  */
 export function findFuzzyMatches(query: string, index: FuzzyIndex, matches: Map<string, SearchMatch>, processor: LanguageProcessor, config: FuzzyConfig): void {
-  // Adaptive max distance for short queries
+  // Adaptive max distance based on query length
   let maxDistance = config.maxEditDistance;
   
-  // For very short queries (3-4 chars), be more lenient
+  // Scale max distance with query length for better fuzzy matching
   if (query.length <= 3) {
     maxDistance = Math.max(maxDistance, 2);
   } else if (query.length <= 4) {
     maxDistance = Math.max(maxDistance, 2);
+  } else if (query.length >= 10) {
+    // For longer queries (10+ chars), allow more edits
+    maxDistance = Math.max(maxDistance, 3);
   }
 
   for (const [variant, words] of index.variantToBase.entries()) {
-    // Improved length check for short queries - be more lenient
+    // More lenient length check - scale with query length
     const lengthDiff = Math.abs(variant.length - query.length);
-    const maxLengthDiff = query.length <= 3 ? 5 : (query.length <= 4 ? 4 : maxDistance);
+    
+    // Calculate max allowed length difference based on query length
+    // Short queries (<=4): strict (maxDistance)
+    // Medium queries (5-9): maxDistance + 1
+    // Long queries (10+): maxDistance + 2
+    let maxLengthDiff;
+    if (query.length <= 4) {
+      maxLengthDiff = query.length <= 3 ? 5 : 4;
+    } else if (query.length <= 9) {
+      maxLengthDiff = maxDistance + 1;
+    } else {
+      maxLengthDiff = maxDistance + 2;
+    }
     
     if (lengthDiff <= maxLengthDiff) {
       // Use Damerau-Levenshtein if transpositions feature is enabled
       const useTranspositions = index.config.features?.includes("transpositions");
       const distance = useTranspositions ? calculateDamerauLevenshteinDistance(query, variant, maxDistance) : calculateLevenshteinDistance(query, variant, maxDistance);
 
-      // Adaptive distance threshold for short queries
+      // Adaptive distance threshold
       const distanceThreshold = query.length <= 3 ? 2 : maxDistance;
       
       if (distance <= distanceThreshold) {

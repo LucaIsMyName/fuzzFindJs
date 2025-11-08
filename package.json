@@ -1,6 +1,6 @@
 {
   "name": "fuzzyfindjs",
-  "version": "1.0.45",
+  "version": "1.0.51",
   "description": "A multi-language optimized fuzzy search library with phonetic matching, compound word splitting, and synonym support",
   "type": "module",
   "main": "./dist/cjs/index.js",
@@ -36,6 +36,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:json": "vitest --run --reporter=json > test-results.json",
+    "test:scripts": "node scripts/test-prefix-debug.js && node scripts/test-substring.js && node scripts/test-short-queries.js && node scripts/test-final-verification.js",
     "test:coverage": "vitest --coverage",
     "preview": "vite preview",
     "prepublishOnly": "npm run build"

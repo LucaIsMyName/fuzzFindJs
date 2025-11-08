@@ -154,10 +154,19 @@ function findFuzzyMatches(query, index, matches, processor, config) {
     maxDistance = Math.max(maxDistance, 2);
   } else if (query.length <= 4) {
     maxDistance = Math.max(maxDistance, 2);
+  } else if (query.length >= 10) {
+    maxDistance = Math.max(maxDistance, 3);
   }
   for (const [variant, words] of index.variantToBase.entries()) {
     const lengthDiff = Math.abs(variant.length - query.length);
-    const maxLengthDiff = query.length <= 3 ? 5 : query.length <= 4 ? 4 : maxDistance;
+    let maxLengthDiff;
+    if (query.length <= 4) {
+      maxLengthDiff = query.length <= 3 ? 5 : 4;
+    } else if (query.length <= 9) {
+      maxLengthDiff = maxDistance + 1;
+    } else {
+      maxLengthDiff = maxDistance + 2;
+    }
     if (lengthDiff <= maxLengthDiff) {
       const useTranspositions = index.config.features?.includes("transpositions");
       const distance = useTranspositions ? levenshtein.calculateDamerauLevenshteinDistance(query, variant, maxDistance) : levenshtein.calculateLevenshteinDistance(query, variant, maxDistance);
