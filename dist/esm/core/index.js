@@ -1,13 +1,13 @@
 import { mergeConfig, validateConfig, DEFAULT_MATCH_TYPE_SCORES, DEFAULT_SCORING_MODIFIERS } from "./config.js";
 import { LanguageRegistry } from "../languages/index.js";
-import { calculateDamerauLevenshteinDistance, calculateLevenshteinDistance, calculateNgramSimilarity } from "../algorithms/levenshtein.js";
+import { calculateNgramSimilarity, calculateLevenshteinDistance } from "../algorithms/levenshtein.js";
+import { findExactMatches, findPrefixMatches, findSubstringMatches, findPhoneticMatches, findSynonymMatches, findNgramMatches, findFuzzyMatches } from "./matchers.js";
 import { buildInvertedIndex, searchInvertedIndex, calculateBM25Scores } from "./inverted-index.js";
 import { calculateHighlights } from "./highlighting.js";
 import { SearchCache } from "./cache.js";
 import { removeAccents } from "../utils/accent-normalization.js";
 import { normalizeFieldWeights, extractFieldValues } from "./field-weighting.js";
 import { filterStopWords } from "../utils/stop-words.js";
-import { matchesWildcard, matchesWord } from "../utils/word-boundaries.js";
 import { parseQuery } from "../utils/phrase-parser.js";
 import { matchPhrase } from "./phrase-matching.js";
 import { sampleTextForDetection, detectLanguages } from "../utils/language-detection.js";
@@ -310,184 +310,6 @@ function getSuggestions(index, query, maxResults, options = {}) {
     index._cache.set(processedQuery, results, limit, options);
   }
   return results;
-}
-function findExactMatches(query, index, matches, language) {
-  const wordBoundaries = index.config.wordBoundaries || false;
-  if (query.includes("*")) {
-    for (const baseWord of index.base) {
-      if (matchesWildcard(baseWord, query)) {
-        if (!matches.has(baseWord)) {
-          matches.set(baseWord, {
-            word: baseWord,
-            normalized: query,
-            matchType: "exact",
-            editDistance: 0,
-            language
-          });
-        }
-      }
-    }
-    return;
-  }
-  const exactMatches = index.variantToBase.get(query.toLowerCase());
-  if (exactMatches) {
-    exactMatches.forEach((word) => {
-      if (wordBoundaries && !matchesWord(word, query, wordBoundaries)) {
-        return;
-      }
-      const existing = matches.get(word);
-      if (!existing || existing.matchType !== "exact") {
-        matches.set(word, {
-          word,
-          normalized: query,
-          matchType: "exact",
-          editDistance: 0,
-          language
-        });
-      }
-    });
-  }
-  const queryLower = query.toLowerCase();
-  for (const baseWord of index.base) {
-    if (baseWord.toLowerCase() === queryLower) {
-      if (!matches.has(baseWord)) {
-        matches.set(baseWord, {
-          word: baseWord,
-          normalized: query,
-          matchType: "exact",
-          editDistance: 0,
-          language
-        });
-      }
-    }
-  }
-}
-function findPrefixMatches(query, index, matches, language) {
-  const wordBoundaries = index.config.wordBoundaries || false;
-  const queryLower = query.toLowerCase();
-  for (const [variant, words] of index.variantToBase.entries()) {
-    if (variant.startsWith(queryLower) && variant !== queryLower) {
-      words.forEach((word) => {
-        if (wordBoundaries && !matchesWord(word, query, wordBoundaries)) {
-          return;
-        }
-        if (!matches.has(word)) {
-          matches.set(word, {
-            word,
-            normalized: variant,
-            matchType: "prefix",
-            language
-          });
-        }
-      });
-    }
-  }
-}
-function findSubstringMatches(query, index, matches, language) {
-  const queryLower = query.toLowerCase();
-  if (queryLower.length < 2) return;
-  for (const [variant, words] of index.variantToBase.entries()) {
-    if (variant.includes(queryLower) && !variant.startsWith(queryLower) && variant !== queryLower) {
-      words.forEach((word) => {
-        const existingMatch = matches.get(word);
-        if (!existingMatch || existingMatch.matchType !== "exact" && existingMatch.matchType !== "prefix") {
-          matches.set(word, {
-            word,
-            normalized: variant,
-            matchType: "substring",
-            language
-          });
-        }
-      });
-    }
-  }
-}
-function findPhoneticMatches(query, processor, index, matches) {
-  if (!processor.supportedFeatures.includes("phonetic")) return;
-  const phoneticCode = processor.getPhoneticCode(query);
-  if (phoneticCode) {
-    const phoneticMatches = index.phoneticToBase.get(phoneticCode);
-    if (phoneticMatches) {
-      phoneticMatches.forEach((word) => {
-        if (!matches.has(word)) {
-          matches.set(word, {
-            word,
-            normalized: query,
-            matchType: "phonetic",
-            phoneticCode,
-            language: processor.language
-          });
-        }
-      });
-    }
-  }
-}
-function findSynonymMatches(query, index, matches) {
-  const synonymMatches = index.synonymMap.get(query.toLowerCase());
-  if (synonymMatches) {
-    synonymMatches.forEach((word) => {
-      if (!matches.has(word)) {
-        matches.set(word, {
-          word,
-          normalized: query,
-          matchType: "synonym",
-          language: "synonym"
-        });
-      }
-    });
-  }
-}
-function findNgramMatches(query, index, matches, language, ngramSize) {
-  if (query.length < ngramSize) return;
-  const queryNgrams = generateNgrams(query, ngramSize);
-  const candidateWords = /* @__PURE__ */ new Set();
-  queryNgrams.forEach((ngram) => {
-    const ngramMatches = index.ngramIndex.get(ngram);
-    if (ngramMatches) {
-      ngramMatches.forEach((word) => candidateWords.add(word));
-    }
-  });
-  candidateWords.forEach((word) => {
-    if (!matches.has(word)) {
-      matches.set(word, {
-        word,
-        normalized: query,
-        matchType: "ngram",
-        language
-      });
-    }
-  });
-}
-function findFuzzyMatches(query, index, matches, processor, config) {
-  let maxDistance = config.maxEditDistance;
-  if (query.length <= 3) {
-    maxDistance = Math.max(maxDistance, 2);
-  } else if (query.length <= 4) {
-    maxDistance = Math.max(maxDistance, 2);
-  }
-  for (const [variant, words] of index.variantToBase.entries()) {
-    const lengthDiff = Math.abs(variant.length - query.length);
-    const maxLengthDiff = query.length <= 3 ? 5 : query.length <= 4 ? 4 : maxDistance;
-    if (lengthDiff <= maxLengthDiff) {
-      const useTranspositions = index.config.features?.includes("transpositions");
-      const distance = useTranspositions ? calculateDamerauLevenshteinDistance(query, variant, maxDistance) : calculateLevenshteinDistance(query, variant, maxDistance);
-      const distanceThreshold = query.length <= 3 ? 2 : maxDistance;
-      if (distance <= distanceThreshold) {
-        words.forEach((word) => {
-          const existingMatch = matches.get(word);
-          if (!existingMatch || existingMatch.matchType !== "exact" && existingMatch.matchType !== "prefix" && (existingMatch.editDistance || Infinity) > distance) {
-            matches.set(word, {
-              word,
-              normalized: variant,
-              matchType: "fuzzy",
-              editDistance: distance,
-              language: processor.language
-            });
-          }
-        });
-      }
-    }
-  }
 }
 function createSuggestionResult(match, originalQuery, threshold, index, options) {
   let score = calculateMatchScore(match, originalQuery, index.config);
